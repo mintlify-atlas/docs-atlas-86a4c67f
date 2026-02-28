@@ -1,122 +1,180 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "OpenTUI",
+  "theme": "aspen",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#00FFFF",
+    "light": "#00FFFF",
+    "dark": "#00FFFF"
   },
   "favicon": "/favicon.svg",
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/anomalyco/opentui"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/anomalyco/opentui"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Getting Started",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
+              "introduction",
+              "installation",
+              "quickstart"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Core Concepts",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "core-concepts/renderer",
+              "core-concepts/renderables",
+              "core-concepts/constructs",
+              "core-concepts/layout-system",
+              "core-concepts/framebuffer"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Guides",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "guides/building-your-first-app",
+              "guides/styling-and-colors",
+              "guides/keyboard-and-mouse",
+              "guides/console-overlay",
+              "guides/animations",
+              "guides/3d-rendering",
+              "guides/syntax-highlighting"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "Framework Integrations",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "integrations/react",
+              "integrations/solid"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/performance",
+              "advanced/testing",
+              "advanced/environment-variables",
+              "advanced/native-zig-core"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "Components",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Components",
             "pages": [
-              "api-reference/introduction"
+              "components/overview"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Layout",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "components/box",
+              "components/scrollbox"
+            ]
+          },
+          {
+            "group": "Text & Content",
+            "pages": [
+              "components/text",
+              "components/textnode",
+              "components/markdown",
+              "components/code",
+              "components/diff"
+            ]
+          },
+          {
+            "group": "Input & Forms",
+            "pages": [
+              "components/input",
+              "components/textarea",
+              "components/select",
+              "components/slider",
+              "components/tabselect"
+            ]
+          },
+          {
+            "group": "Data Display",
+            "pages": [
+              "components/texttable",
+              "components/asciifont"
+            ]
+          },
+          {
+            "group": "Utilities",
+            "pages": [
+              "components/scrollbar",
+              "components/framebuffer-component"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core API",
+            "pages": [
+              "api/cli-renderer",
+              "api/renderable",
+              "api/buffer",
+              "api/console"
+            ]
+          },
+          {
+            "group": "Text & Editing",
+            "pages": [
+              "api/text-buffer",
+              "api/edit-buffer",
+              "api/editor-view"
+            ]
+          },
+          {
+            "group": "Rendering",
+            "pages": [
+              "api/framebuffer",
+              "api/native-span-feed",
+              "api/rgba"
+            ]
+          },
+          {
+            "group": "Input Handling",
+            "pages": [
+              "api/keyboard",
+              "api/mouse"
+            ]
+          },
+          {
+            "group": "Layout",
+            "pages": [
+              "api/yoga-layout"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "api/animation-timeline",
+              "api/syntax-highlighting",
+              "api/3d-api"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

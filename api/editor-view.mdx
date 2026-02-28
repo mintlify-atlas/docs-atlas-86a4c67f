@@ -1,0 +1,723 @@
+---
+title: "EditorView"
+description: "A viewport and rendering layer for text editing with selection, scrolling, and visual cursor management."
+---
+
+## Overview
+
+The `EditorView` class provides a complete text editing UI component with viewport management, text selection, visual cursor control, and text wrapping. It works with an `EditBuffer` to provide the visual rendering layer for text editing.
+
+## Constructor
+
+<ParamField path="lib" type="RenderLib" required>
+  The render library instance.
+</ParamField>
+
+<ParamField path="ptr" type="Pointer" required>
+  Pointer to the native view.
+</ParamField>
+
+<ParamField path="editBuffer" type="EditBuffer" required>
+  The EditBuffer instance to render.
+</ParamField>
+
+## Static Methods
+
+### create
+
+Creates a new EditorView instance.
+
+```typescript
+static create(
+  editBuffer: EditBuffer,
+  viewportWidth: number,
+  viewportHeight: number
+): EditorView
+```
+
+<ParamField path="editBuffer" type="EditBuffer" required>
+  The EditBuffer to render.
+</ParamField>
+
+<ParamField path="viewportWidth" type="number" required>
+  The width of the viewport in characters.
+</ParamField>
+
+<ParamField path="viewportHeight" type="number" required>
+  The height of the viewport in lines.
+</ParamField>
+
+<ResponseField name="return" type="EditorView">
+  A new EditorView instance.
+</ResponseField>
+
+## Properties
+
+### ptr
+
+```typescript
+get ptr(): Pointer
+```
+
+<ResponseField name="ptr" type="Pointer">
+  The native pointer to the view.
+</ResponseField>
+
+### extmarks
+
+```typescript
+get extmarks(): any
+```
+
+<ResponseField name="extmarks" type="any">
+  The extmarks controller for managing editor marks.
+</ResponseField>
+
+## Viewport Management
+
+### setViewportSize
+
+Sets the viewport dimensions.
+
+```typescript
+setViewportSize(width: number, height: number): void
+```
+
+<ParamField path="width" type="number" required>
+  The viewport width in characters.
+</ParamField>
+
+<ParamField path="height" type="number" required>
+  The viewport height in lines.
+</ParamField>
+
+### setViewport
+
+Sets the complete viewport configuration.
+
+```typescript
+setViewport(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  moveCursor?: boolean
+): void
+```
+
+<ParamField path="x" type="number" required>
+  The horizontal offset.
+</ParamField>
+
+<ParamField path="y" type="number" required>
+  The vertical offset (line number).
+</ParamField>
+
+<ParamField path="width" type="number" required>
+  The viewport width in characters.
+</ParamField>
+
+<ParamField path="height" type="number" required>
+  The viewport height in lines.
+</ParamField>
+
+<ParamField path="moveCursor" type="boolean" default="true">
+  Whether to move the cursor into view.
+</ParamField>
+
+### getViewport
+
+Gets the current viewport configuration.
+
+```typescript
+getViewport(): Viewport
+```
+
+<ResponseField name="return" type="Viewport">
+  Object containing offsetX, offsetY, width, and height.
+</ResponseField>
+
+### setScrollMargin
+
+Sets the scroll margin for cursor visibility.
+
+```typescript
+setScrollMargin(margin: number): void
+```
+
+<ParamField path="margin" type="number" required>
+  The scroll margin in lines.
+</ParamField>
+
+## Text Wrapping
+
+### setWrapMode
+
+Sets the text wrapping mode.
+
+```typescript
+setWrapMode(mode: "none" | "char" | "word"): void
+```
+
+<ParamField path="mode" type="'none' | 'char' | 'word'" required>
+  The wrapping mode: "none" (no wrap), "char" (wrap at character), or "word" (wrap at word boundary).
+</ParamField>
+
+## Line Information
+
+### getVirtualLineCount
+
+Gets the number of virtual lines visible in the viewport.
+
+```typescript
+getVirtualLineCount(): number
+```
+
+<ResponseField name="return" type="number">
+  The number of visible virtual lines.
+</ResponseField>
+
+### getTotalVirtualLineCount
+
+Gets the total number of virtual lines (including wrapping).
+
+```typescript
+getTotalVirtualLineCount(): number
+```
+
+<ResponseField name="return" type="number">
+  The total number of virtual lines.
+</ResponseField>
+
+### getLineInfo
+
+Gets line information for the current viewport.
+
+```typescript
+getLineInfo(): LineInfo
+```
+
+<ResponseField name="return" type="LineInfo">
+  Line information including offsets and positions.
+</ResponseField>
+
+### getLogicalLineInfo
+
+Gets logical line information (without wrapping).
+
+```typescript
+getLogicalLineInfo(): LineInfo
+```
+
+<ResponseField name="return" type="LineInfo">
+  Logical line information.
+</ResponseField>
+
+## Selection
+
+### setSelection
+
+Sets the text selection by character offsets.
+
+```typescript
+setSelection(
+  start: number,
+  end: number,
+  bgColor?: RGBA,
+  fgColor?: RGBA
+): void
+```
+
+<ParamField path="start" type="number" required>
+  The start character offset.
+</ParamField>
+
+<ParamField path="end" type="number" required>
+  The end character offset.
+</ParamField>
+
+<ParamField path="bgColor" type="RGBA">
+  Background color for the selection.
+</ParamField>
+
+<ParamField path="fgColor" type="RGBA">
+  Foreground color for the selection.
+</ParamField>
+
+### updateSelection
+
+Updates the end position of the current selection.
+
+```typescript
+updateSelection(end: number, bgColor?: RGBA, fgColor?: RGBA): void
+```
+
+<ParamField path="end" type="number" required>
+  The new end character offset.
+</ParamField>
+
+<ParamField path="bgColor" type="RGBA">
+  Background color for the selection.
+</ParamField>
+
+<ParamField path="fgColor" type="RGBA">
+  Foreground color for the selection.
+</ParamField>
+
+### resetSelection
+
+Clears the current selection.
+
+```typescript
+resetSelection(): void
+```
+
+### getSelection
+
+Gets the current selection range.
+
+```typescript
+getSelection(): { start: number; end: number } | null
+```
+
+<ResponseField name="return" type="{ start: number; end: number } | null">
+  The selection range or null if no selection.
+</ResponseField>
+
+### hasSelection
+
+Checks if there is an active selection.
+
+```typescript
+hasSelection(): boolean
+```
+
+<ResponseField name="return" type="boolean">
+  True if there is an active selection.
+</ResponseField>
+
+### setLocalSelection
+
+Sets selection using viewport-relative coordinates.
+
+```typescript
+setLocalSelection(
+  anchorX: number,
+  anchorY: number,
+  focusX: number,
+  focusY: number,
+  bgColor?: RGBA,
+  fgColor?: RGBA,
+  updateCursor?: boolean,
+  followCursor?: boolean
+): boolean
+```
+
+<ParamField path="anchorX" type="number" required>
+  The anchor X position in viewport.
+</ParamField>
+
+<ParamField path="anchorY" type="number" required>
+  The anchor Y position in viewport.
+</ParamField>
+
+<ParamField path="focusX" type="number" required>
+  The focus X position in viewport.
+</ParamField>
+
+<ParamField path="focusY" type="number" required>
+  The focus Y position in viewport.
+</ParamField>
+
+<ParamField path="bgColor" type="RGBA">
+  Background color for the selection.
+</ParamField>
+
+<ParamField path="fgColor" type="RGBA">
+  Foreground color for the selection.
+</ParamField>
+
+<ParamField path="updateCursor" type="boolean" default="false">
+  Whether to update the cursor position.
+</ParamField>
+
+<ParamField path="followCursor" type="boolean" default="false">
+  Whether to follow the cursor.
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  True if the selection was set successfully.
+</ResponseField>
+
+### updateLocalSelection
+
+Updates selection using viewport-relative coordinates.
+
+```typescript
+updateLocalSelection(
+  anchorX: number,
+  anchorY: number,
+  focusX: number,
+  focusY: number,
+  bgColor?: RGBA,
+  fgColor?: RGBA,
+  updateCursor?: boolean,
+  followCursor?: boolean
+): boolean
+```
+
+<ParamField path="anchorX" type="number" required>
+  The anchor X position in viewport.
+</ParamField>
+
+<ParamField path="anchorY" type="number" required>
+  The anchor Y position in viewport.
+</ParamField>
+
+<ParamField path="focusX" type="number" required>
+  The focus X position in viewport.
+</ParamField>
+
+<ParamField path="focusY" type="number" required>
+  The focus Y position in viewport.
+</ParamField>
+
+<ParamField path="bgColor" type="RGBA">
+  Background color for the selection.
+</ParamField>
+
+<ParamField path="fgColor" type="RGBA">
+  Foreground color for the selection.
+</ParamField>
+
+<ParamField path="updateCursor" type="boolean" default="false">
+  Whether to update the cursor position.
+</ParamField>
+
+<ParamField path="followCursor" type="boolean" default="false">
+  Whether to follow the cursor.
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  True if the selection was updated successfully.
+</ResponseField>
+
+### resetLocalSelection
+
+Clears the local selection.
+
+```typescript
+resetLocalSelection(): void
+```
+
+### getSelectedText
+
+Gets the currently selected text.
+
+```typescript
+getSelectedText(): string
+```
+
+<ResponseField name="return" type="string">
+  The selected text or empty string if no selection.
+</ResponseField>
+
+### deleteSelectedText
+
+Deletes the currently selected text.
+
+```typescript
+deleteSelectedText(): void
+```
+
+## Cursor Operations
+
+### getCursor
+
+Gets the current cursor position.
+
+```typescript
+getCursor(): { row: number; col: number }
+```
+
+<ResponseField name="return" type="{ row: number; col: number }">
+  The cursor position.
+</ResponseField>
+
+### getVisualCursor
+
+Gets the visual cursor position (accounting for wrapping).
+
+```typescript
+getVisualCursor(): VisualCursor
+```
+
+<ResponseField name="return" type="VisualCursor">
+  The visual cursor position with row, col, and offset.
+</ResponseField>
+
+### setCursorByOffset
+
+Sets the cursor by character offset.
+
+```typescript
+setCursorByOffset(offset: number): void
+```
+
+<ParamField path="offset" type="number" required>
+  The character offset (0-based).
+</ParamField>
+
+### moveUpVisual
+
+Moves the cursor up one visual line.
+
+```typescript
+moveUpVisual(): void
+```
+
+### moveDownVisual
+
+Moves the cursor down one visual line.
+
+```typescript
+moveDownVisual(): void
+```
+
+### getNextWordBoundary
+
+Finds the next word boundary from the cursor.
+
+```typescript
+getNextWordBoundary(): VisualCursor
+```
+
+<ResponseField name="return" type="VisualCursor">
+  The position of the next word boundary.
+</ResponseField>
+
+### getPrevWordBoundary
+
+Finds the previous word boundary from the cursor.
+
+```typescript
+getPrevWordBoundary(): VisualCursor
+```
+
+<ResponseField name="return" type="VisualCursor">
+  The position of the previous word boundary.
+</ResponseField>
+
+### getEOL
+
+Gets the end-of-line position for the current line.
+
+```typescript
+getEOL(): VisualCursor
+```
+
+<ResponseField name="return" type="VisualCursor">
+  The end-of-line position.
+</ResponseField>
+
+### getVisualSOL
+
+Gets the visual start-of-line position.
+
+```typescript
+getVisualSOL(): VisualCursor
+```
+
+<ResponseField name="return" type="VisualCursor">
+  The visual start-of-line position.
+</ResponseField>
+
+### getVisualEOL
+
+Gets the visual end-of-line position.
+
+```typescript
+getVisualEOL(): VisualCursor
+```
+
+<ResponseField name="return" type="VisualCursor">
+  The visual end-of-line position.
+</ResponseField>
+
+## Text Retrieval
+
+### getText
+
+Gets the text content visible in the view.
+
+```typescript
+getText(): string
+```
+
+<ResponseField name="return" type="string">
+  The visible text content.
+</ResponseField>
+
+## Placeholder Text
+
+### setPlaceholderStyledText
+
+Sets placeholder text with styling.
+
+```typescript
+setPlaceholderStyledText(
+  chunks: { text: string; fg?: RGBA; bg?: RGBA; attributes?: number }[]
+): void
+```
+
+<ParamField path="chunks" type="Array<{ text: string; fg?: RGBA; bg?: RGBA; attributes?: number }>" required>
+  Array of styled text chunks for the placeholder.
+</ParamField>
+
+## Tab Indicators
+
+### setTabIndicator
+
+Sets the character to display for tab characters.
+
+```typescript
+setTabIndicator(indicator: string | number): void
+```
+
+<ParamField path="indicator" type="string | number" required>
+  The character or Unicode code point to display for tabs.
+</ParamField>
+
+### setTabIndicatorColor
+
+Sets the color for tab indicator characters.
+
+```typescript
+setTabIndicatorColor(color: RGBA): void
+```
+
+<ParamField path="color" type="RGBA" required>
+  The color for tab indicators.
+</ParamField>
+
+## Measurement
+
+### measureForDimensions
+
+Measures the text for given dimensions.
+
+```typescript
+measureForDimensions(
+  width: number,
+  height: number
+): { lineCount: number; maxWidth: number } | null
+```
+
+<ParamField path="width" type="number" required>
+  The width to measure for.
+</ParamField>
+
+<ParamField path="height" type="number" required>
+  The height to measure for.
+</ParamField>
+
+<ResponseField name="return" type="{ lineCount: number; maxWidth: number } | null">
+  Measurement result with line count and max width, or null on error.
+</ResponseField>
+
+## Memory Management
+
+### destroy
+
+Destroys the view and frees native resources.
+
+```typescript
+destroy(): void
+```
+
+## Types
+
+### Viewport
+
+```typescript
+interface Viewport {
+  offsetY: number
+  offsetX: number
+  height: number
+  width: number
+}
+```
+
+<ParamField path="offsetY" type="number" required>
+  The vertical offset (line number).
+</ParamField>
+
+<ParamField path="offsetX" type="number" required>
+  The horizontal offset (column).
+</ParamField>
+
+<ParamField path="height" type="number" required>
+  The viewport height in lines.
+</ParamField>
+
+<ParamField path="width" type="number" required>
+  The viewport width in characters.
+</ParamField>
+
+### VisualCursor
+
+```typescript
+interface VisualCursor {
+  row: number
+  col: number
+  offset: number
+}
+```
+
+<ParamField path="row" type="number" required>
+  The visual row position.
+</ParamField>
+
+<ParamField path="col" type="number" required>
+  The visual column position.
+</ParamField>
+
+<ParamField path="offset" type="number" required>
+  The character offset from start of buffer.
+</ParamField>
+
+## Example
+
+```typescript
+import { EditBuffer, EditorView, RGBA } from "@opentui/core"
+
+// Create an edit buffer and view
+const buffer = EditBuffer.create("wcwidth")
+const view = EditorView.create(buffer, 80, 24)
+
+// Set text
+buffer.setText("Hello, World!\nWelcome to OpenTUI.")
+
+// Configure viewport
+view.setViewport(0, 0, 80, 24)
+view.setWrapMode("word")
+
+// Set text selection
+const selectionBg = new RGBA(100, 100, 200, 255)
+view.setSelection(0, 5, selectionBg)
+
+// Get selected text
+const selectedText = view.getSelectedText()
+console.log(selectedText) // "Hello"
+
+// Move cursor visually
+view.moveDownVisual()
+
+// Get cursor position
+const cursor = view.getVisualCursor()
+console.log(`Cursor at ${cursor.row}:${cursor.col}`)
+
+// Clean up
+view.destroy()
+buffer.destroy()
+```

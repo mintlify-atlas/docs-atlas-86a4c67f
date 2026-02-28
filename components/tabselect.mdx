@@ -1,0 +1,513 @@
+---
+title: TabSelect
+description: A horizontal tab navigation component with keyboard support and visual indicators
+---
+
+## Overview
+
+The `TabSelectRenderable` component provides a horizontal tab navigation interface with automatic scrolling, optional descriptions, and visual underlines. It's ideal for building tabbed interfaces and navigation menus.
+
+## Basic Usage
+
+```typescript
+import { Screen, TabSelectRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const tabs = new TabSelectRenderable(ctx, {
+  x: 5,
+  y: 5,
+  width: 60,
+  options: [
+    { name: "Dashboard", description: "Overview and statistics" },
+    { name: "Settings", description: "Configure your preferences" },
+    { name: "Profile", description: "Manage your profile" },
+  ],
+})
+
+tabs.on("itemSelected", (index, option) => {
+  console.log(`Switched to tab: ${option.name}`)
+})
+
+screen.append(tabs)
+tabs.focus()
+```
+
+## Props
+
+<ParamField path="options" type="TabSelectOption[]" default="[]">
+  Array of tab options. Each has `name`, `description`, and optional `value`.
+</ParamField>
+
+<ParamField path="tabWidth" type="number" default="20">
+  Width of each tab in characters
+</ParamField>
+
+<ParamField path="backgroundColor" type="ColorInput" default="'transparent'">
+  Background color when unfocused
+</ParamField>
+
+<ParamField path="textColor" type="ColorInput" default="'#FFFFFF'">
+  Text color for unselected tabs
+</ParamField>
+
+<ParamField path="focusedBackgroundColor" type="ColorInput" default="'#1a1a1a'">
+  Background color when focused
+</ParamField>
+
+<ParamField path="focusedTextColor" type="ColorInput" default="'#FFFFFF'">
+  Text color when focused
+</ParamField>
+
+<ParamField path="selectedBackgroundColor" type="ColorInput" default="'#334455'">
+  Background color of selected tab
+</ParamField>
+
+<ParamField path="selectedTextColor" type="ColorInput" default="'#FFFF00'">
+  Text color of selected tab
+</ParamField>
+
+<ParamField path="selectedDescriptionColor" type="ColorInput" default="'#CCCCCC'">
+  Color for the selected tab's description
+</ParamField>
+
+<ParamField path="showScrollArrows" type="boolean" default="true">
+  Show `‹` and `›` arrows when there are more tabs than can fit
+</ParamField>
+
+<ParamField path="showDescription" type="boolean" default="true">
+  Whether to show the description of the selected tab
+</ParamField>
+
+<ParamField path="showUnderline" type="boolean" default="true">
+  Show underline beneath the selected tab
+</ParamField>
+
+<ParamField path="wrapSelection" type="boolean" default="false">
+  Whether to wrap selection from last to first tab (and vice versa)
+</ParamField>
+
+<ParamField path="keyBindings" type="TabSelectKeyBinding[]">
+  Custom key bindings
+</ParamField>
+
+<ParamField path="keyAliasMap" type="KeyAliasMap">
+  Custom key aliases
+</ParamField>
+
+## Types
+
+### TabSelectOption
+
+```typescript
+interface TabSelectOption {
+  name: string // Tab name
+  description: string // Description text
+  value?: any // Optional associated value
+}
+```
+
+## Events
+
+### selectionChanged
+
+Fired when the selected tab changes (via keyboard or programmatically).
+
+```typescript
+tabs.on("selectionChanged", (index: number, option: TabSelectOption) => {
+  console.log(`Tab changed to: ${option.name} (index ${index})`)
+})
+```
+
+### itemSelected
+
+Fired when the user presses Enter on a tab.
+
+```typescript
+tabs.on("itemSelected", (index: number, option: TabSelectOption) => {
+  console.log(`Tab activated: ${option.name}`)
+})
+```
+
+## Methods
+
+### options
+
+Get or set the tab options.
+
+```typescript
+// Get options
+const currentOptions = tabs.options
+
+// Set options
+tabs.options = [
+  { name: "Tab 1", description: "First tab" },
+  { name: "Tab 2", description: "Second tab" },
+]
+```
+
+### getSelectedOption()
+
+Returns the currently selected tab option or null.
+
+```typescript
+const selected = tabs.getSelectedOption()
+if (selected) {
+  console.log(selected.name)
+}
+```
+
+### getSelectedIndex()
+
+Returns the index of the currently selected tab.
+
+```typescript
+const index = tabs.getSelectedIndex()
+```
+
+### setSelectedIndex()
+
+Programmatically select a tab by index.
+
+```typescript
+tabs.setSelectedIndex(1) // Select second tab
+```
+
+### moveLeft() / moveRight()
+
+Move selection left or right.
+
+```typescript
+tabs.moveLeft()
+tabs.moveRight()
+```
+
+### selectCurrent()
+
+Trigger selection of the current tab (fires `itemSelected` event).
+
+```typescript
+tabs.selectCurrent()
+```
+
+### tabWidth
+
+Get or set the width of each tab.
+
+```typescript
+tabs.tabWidth = 25
+```
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `←` / `[` | Move to previous tab |
+| `→` / `]` | Move to next tab |
+| `Enter` | Activate current tab |
+
+## Layout Behavior
+
+The height is automatically calculated based on enabled features:
+
+- Base: 1 row (tab names)
+- `showUnderline`: +1 row
+- `showDescription`: +1 row
+
+## Examples
+
+### Simple Tab Navigation
+
+```typescript
+import { Screen, TabSelectRenderable, TextRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const tabs = new TabSelectRenderable(ctx, {
+  x: 2,
+  y: 2,
+  width: 60,
+  options: [
+    { name: "Home", description: "Main dashboard" },
+    { name: "Projects", description: "Your projects" },
+    { name: "Tasks", description: "Task management" },
+    { name: "Settings", description: "Application settings" },
+  ],
+})
+
+const content = new TextRenderable(ctx, {
+  x: 2,
+  y: 6,
+  text: "Content for Home tab",
+})
+
+tabs.on("selectionChanged", (index, option) => {
+  content.text = `Content for ${option.name} tab`
+})
+
+screen.append(tabs, content)
+tabs.focus()
+```
+
+### Minimal Tabs (No Description or Underline)
+
+```typescript
+import { Screen, TabSelectRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const tabs = new TabSelectRenderable(ctx, {
+  x: 5,
+  y: 5,
+  width: 60,
+  options: [
+    { name: "Overview", description: "" },
+    { name: "Details", description: "" },
+    { name: "History", description: "" },
+  ],
+  showDescription: false,
+  showUnderline: false,
+  tabWidth: 15,
+})
+
+screen.append(tabs)
+tabs.focus()
+```
+
+### Many Tabs with Scrolling
+
+```typescript
+import { Screen, TabSelectRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const manyTabs = Array.from({ length: 20 }, (_, i) => ({
+  name: `Tab ${i + 1}`,
+  description: `Content for tab ${i + 1}`,
+  value: i,
+}))
+
+const tabs = new TabSelectRenderable(ctx, {
+  x: 2,
+  y: 2,
+  width: 60,
+  tabWidth: 12,
+  options: manyTabs,
+  showScrollArrows: true,
+  wrapSelection: true,
+})
+
+screen.append(tabs)
+tabs.focus()
+```
+
+### File Editor Tabs
+
+```typescript
+import { Screen, TabSelectRenderable, TextRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const openFiles = [
+  { name: "index.ts", description: "Modified 2 minutes ago", value: "file1" },
+  { name: "App.tsx", description: "Saved", value: "file2" },
+  { name: "styles.css", description: "Modified 5 minutes ago", value: "file3" },
+]
+
+const fileTabs = new TabSelectRenderable(ctx, {
+  x: 2,
+  y: 1,
+  width: 70,
+  tabWidth: 20,
+  options: openFiles,
+  selectedBackgroundColor: "#264f78",
+  selectedTextColor: "#FFFFFF",
+})
+
+const editor = new TextRenderable(ctx, {
+  x: 2,
+  y: 5,
+  width: 70,
+  height: 20,
+  backgroundColor: "#1e1e1e",
+  text: "// File content here",
+})
+
+fileTabs.on("selectionChanged", (index, option) => {
+  editor.text = `// Content of ${option.name}`
+})
+
+screen.append(fileTabs, editor)
+fileTabs.focus()
+```
+
+### Settings Panels
+
+```typescript
+import { Screen, TabSelectRenderable, TextRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const settingsTabs = new TabSelectRenderable(ctx, {
+  x: 5,
+  y: 3,
+  width: 60,
+  options: [
+    { name: "General", description: "Basic settings" },
+    { name: "Appearance", description: "Theme and colors" },
+    { name: "Keyboard", description: "Shortcuts" },
+    { name: "Advanced", description: "Power user options" },
+  ],
+  tabWidth: 15,
+  focusedBackgroundColor: "#2a2a2a",
+  selectedBackgroundColor: "#3a3a3a",
+  showUnderline: true,
+})
+
+const panelTitle = new TextRenderable(ctx, {
+  x: 5,
+  y: 7,
+  text: "General Settings",
+  textColor: "#FFFF00",
+})
+
+const panelContent = new TextRenderable(ctx, {
+  x: 5,
+  y: 9,
+  text: "Configure general application settings here.",
+})
+
+settingsTabs.on("selectionChanged", (index, option) => {
+  panelTitle.text = `${option.name} Settings`
+  panelContent.text = `Configure ${option.name.toLowerCase()} settings here.`
+})
+
+screen.append(settingsTabs, panelTitle, panelContent)
+settingsTabs.focus()
+```
+
+### Dynamic Tab Management
+
+```typescript
+import { Screen, TabSelectRenderable, TextRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+let tabs = [
+  { name: "Tab 1", description: "First tab" },
+]
+
+const tabSelect = new TabSelectRenderable(ctx, {
+  x: 5,
+  y: 3,
+  width: 60,
+  options: tabs,
+})
+
+const addButton = new TextRenderable(ctx, {
+  x: 5,
+  y: 7,
+  text: "Press 'n' to add a new tab",
+  textColor: "#888888",
+})
+
+// Add new tab on 'n' key
+screen.on("keypress", (key) => {
+  if (key.name === "n") {
+    tabs.push({
+      name: `Tab ${tabs.length + 1}`,
+      description: `Tab number ${tabs.length + 1}`,
+    })
+    tabSelect.options = tabs
+    tabSelect.setSelectedIndex(tabs.length - 1)
+  }
+})
+
+screen.append(tabSelect, addButton)
+tabSelect.focus()
+```
+
+### Browser-Style Tabs
+
+```typescript
+import { Screen, TabSelectRenderable, TextRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const browserTabs = new TabSelectRenderable(ctx, {
+  x: 2,
+  y: 1,
+  width: 80,
+  tabWidth: 25,
+  options: [
+    { name: "Google", description: "https://google.com" },
+    { name: "GitHub", description: "https://github.com" },
+    { name: "Documentation", description: "https://docs.example.com" },
+  ],
+  backgroundColor: "#2d2d2d",
+  selectedBackgroundColor: "#1e1e1e",
+  selectedTextColor: "#ffffff",
+  showUnderline: false,
+})
+
+const addressBar = new TextRenderable(ctx, {
+  x: 2,
+  y: 4,
+  width: 80,
+  backgroundColor: "#3a3a3a",
+  text: " https://google.com",
+})
+
+const pageContent = new TextRenderable(ctx, {
+  x: 2,
+  y: 6,
+  width: 80,
+  height: 20,
+  backgroundColor: "#1e1e1e",
+  text: "Page content...",
+})
+
+browserTabs.on("selectionChanged", (index, option) => {
+  addressBar.text = ` ${option.description}`
+  pageContent.text = `Loading ${option.name}...`
+})
+
+screen.append(browserTabs, addressBar, pageContent)
+browserTabs.focus()
+```
+
+## Customization Tips
+
+### Adjusting Tab Width
+
+Set `tabWidth` based on your content:
+- Short labels (5-10 chars): `tabWidth: 12-15`
+- Medium labels (10-15 chars): `tabWidth: 18-22`
+- Long labels (15+ chars): `tabWidth: 25-30`
+
+### Hiding Features
+
+For a compact design:
+```typescript
+showDescription: false
+showUnderline: false
+showScrollArrows: false
+```
+
+### Wrap Selection
+
+Enable `wrapSelection: true` for infinite scrolling through tabs.
+
+## Related Components
+
+- [Select](/components/select) - Vertical dropdown selection
+- [Input](/components/input) - Single-line text input
+- [Textarea](/components/textarea) - Multi-line text input

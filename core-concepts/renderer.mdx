@@ -1,0 +1,439 @@
+---
+title: 'Renderer'
+description: 'The CliRenderer is the heart of OpenTUI, managing terminal output, input events, and the rendering loop'
+---
+
+## Overview
+
+The `CliRenderer` is the core component that orchestrates your entire terminal UI. It manages:
+
+- Terminal output and rendering
+- Input events (keyboard and mouse)
+- The rendering loop and frame timing
+- Layout calculations
+- Focus management
+
+Think of it as the canvas that draws your interface to the terminal.
+
+## Creating a Renderer
+
+Use `createCliRenderer()` to initialize the renderer:
+
+```typescript
+import { createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer({
+  targetFps: 30,
+  maxFps: 60,
+  exitOnCtrlC: true,
+  autoFocus: true,
+})
+```
+
+### Configuration Options
+
+The renderer accepts a `CliRendererConfig` object with these options:
+
+```typescript
+interface CliRendererConfig {
+  // I/O streams
+  stdin?: NodeJS.ReadStream
+  stdout?: NodeJS.WriteStream
+
+  // Frame rate control
+  targetFps?: number              // Target frames per second (default: 30)
+  maxFps?: number                 // Maximum FPS cap (default: 60)
+
+  // Input handling
+  exitOnCtrlC?: boolean           // Exit on Ctrl+C (default: true)
+  useMouse?: boolean              // Enable mouse input (default: true)
+  enableMouseMovement?: boolean   // Track mouse movement (default: true)
+  autoFocus?: boolean             // Auto-focus on left-click (default: true)
+  useKittyKeyboard?: KittyKeyboardOptions | null
+
+  // Terminal features
+  useAlternateScreen?: boolean    // Use alternate screen buffer (default: true)
+  useConsole?: boolean            // Enable debug console (default: true)
+  backgroundColor?: ColorInput    // Terminal background color
+
+  // Performance
+  debounceDelay?: number          // Resize debounce delay in ms (default: 100)
+  gatherStats?: boolean           // Collect performance stats (default: false)
+  memorySnapshotInterval?: number // Memory snapshot interval in ms
+
+  // Console overlay
+  consoleOptions?: ConsoleOptions
+
+  // Hooks
+  postProcessFns?: ((buffer: OptimizedBuffer, deltaTime: number) => void)[]
+  prependInputHandlers?: ((sequence: string) => boolean)[]
+  onDestroy?: () => void
+}
+```
+
+<Info>
+By default, left-clicking auto-focuses the closest focusable renderable. Disable this with `autoFocus: false` for manual focus control.
+</Info>
+
+## Lifecycle
+
+### Rendering Modes
+
+The renderer can operate in two modes:
+
+**1. On-Demand Mode (Default)**
+
+Only re-renders when the renderable tree or layout changes:
+
+```typescript
+const renderer = await createCliRenderer()
+// Renders automatically on changes, no loop needed
+```
+
+**2. Live Mode**
+
+Runs a continuous loop at the specified target FPS:
+
+```typescript
+const renderer = await createCliRenderer({ targetFps: 30 })
+renderer.start() // Start the render loop
+
+// Later...
+renderer.stop()  // Stop the render loop
+```
+
+### Renderer States
+
+The renderer tracks its state through `controlState`:
+
+```typescript
+enum RendererControlState {
+  IDLE = "idle",
+  AUTO_STARTED = "auto_started",
+  EXPLICIT_STARTED = "explicit_started",
+  EXPLICIT_PAUSED = "explicit_paused",
+  EXPLICIT_SUSPENDED = "explicit_suspended",
+  EXPLICIT_STOPPED = "explicit_stopped",
+}
+
+// Check current state
+console.log(renderer.controlState)
+```
+
+### Cleanup
+
+Always destroy the renderer when done:
+
+```typescript
+renderer.destroy()
+```
+
+This cleans up:
+- Terminal state (restores normal mode)
+- Event listeners
+- Child renderables
+- Native resources
+
+<Warning>
+Failing to call `destroy()` may leave the terminal in an altered state.
+</Warning>
+
+## Theme Mode Detection
+
+OpenTUI can detect the terminal's preferred color scheme when the terminal supports DEC mode 2031:
+
+```typescript
+import { type ThemeMode } from "@opentui/core"
+
+// Read current theme mode
+const mode: ThemeMode = renderer.themeMode
+// Returns: "dark" | "light" | null (if unsupported)
+
+// Subscribe to theme changes
+renderer.on("theme_mode", (nextMode: ThemeMode) => {
+  console.log("Theme mode changed:", nextMode)
+  // Update your UI colors accordingly
+})
+```
+
+### Example: Adaptive Colors
+
+```typescript
+function getAdaptiveColor(): string {
+  return renderer.themeMode === "dark" ? "#FFFFFF" : "#000000"
+}
+
+const text = new TextRenderable(renderer, {
+  content: "Adaptive text",
+  fg: getAdaptiveColor(),
+})
+
+renderer.on("theme_mode", () => {
+  text.setForegroundColor(getAdaptiveColor())
+})
+```
+
+<Note>
+If the terminal doesn't support theme detection, `themeMode` will be `null` and no events will fire.
+</Note>
+
+## Root Renderable
+
+Every renderer has a root renderable that represents the entire terminal viewport:
+
+```typescript
+// Access the root
+const root = renderer.root
+
+// Add children to the root
+root.add(myRenderable)
+
+// Root dimensions match terminal size
+console.log(root.width, root.height) // e.g., 80, 24
+```
+
+The root:
+- Uses flexbox column layout by default
+- Automatically resizes with the terminal
+- Manages the global layout tree
+
+## Input Handling
+
+### Keyboard Input
+
+Access keyboard events through the `keyInput` handler:
+
+```typescript
+import { type KeyEvent } from "@opentui/core"
+
+renderer.keyInput.on("keypress", (key: KeyEvent) => {
+  console.log("Key:", key.name)
+  console.log("Sequence:", key.sequence)
+  console.log("Modifiers:", {
+    ctrl: key.ctrl,
+    shift: key.shift,
+    alt: key.meta,
+    option: key.option,
+  })
+
+  if (key.name === "escape") {
+    renderer.destroy()
+  }
+})
+```
+
+### Kitty Keyboard Protocol
+
+Enable enhanced keyboard support:
+
+```typescript
+const renderer = await createCliRenderer({
+  useKittyKeyboard: {
+    disambiguate: true,     // Fix ESC timing, alt+key ambiguity (default: true)
+    alternateKeys: true,    // Report numpad, shifted keys (default: true)
+    events: false,          // Report press/repeat/release (default: false)
+    allKeysAsEscapes: false,// Report all keys as escape codes (default: false)
+    reportText: false,      // Report text with key events (default: false)
+  },
+})
+```
+
+### Mouse Input
+
+Mouse events bubble up through the renderable tree:
+
+```typescript
+import { MouseEvent } from "@opentui/core"
+
+const box = new BoxRenderable(renderer, {
+  id: "clickable-box",
+  onMouseDown: function(event: MouseEvent) {
+    console.log(`Clicked at (${event.x}, ${event.y})`)
+    console.log("Button:", event.button)
+    console.log("Modifiers:", event.modifiers)
+  },
+})
+```
+
+Mouse can be disabled:
+
+```typescript
+renderer.useMouse = false // Disable mouse input
+```
+
+## Rendering Loop
+
+The rendering process follows these steps:
+
+1. **Lifecycle Pass** - Run registered lifecycle callbacks
+2. **Layout Calculation** - Calculate Yoga flexbox layout from root
+3. **Update Pass** - Update renderables and collect render commands
+4. **Render Pass** - Execute render commands on the buffer
+
+### Frame Callbacks
+
+Register callbacks that run every frame:
+
+```typescript
+renderer.setFrameCallback(async (deltaTime: number) => {
+  // deltaTime is in milliseconds since last frame
+  updateAnimation(deltaTime)
+})
+```
+
+### Post-Processing
+
+Apply effects after rendering:
+
+```typescript
+renderer.addPostProcessFn((buffer: OptimizedBuffer, deltaTime: number) => {
+  // Apply effects to the buffer
+  buffer.fillRect(0, 0, 10, 10, RGBA.fromHex("#FF0000"))
+})
+```
+
+## Viewport & Dimensions
+
+```typescript
+// Terminal dimensions
+console.log(renderer.width, renderer.height)           // Render area size
+console.log(renderer.terminalWidth, renderer.terminalHeight) // Full terminal size
+
+// Listen for resize events
+renderer.on("resize", (width: number, height: number) => {
+  console.log(`Resized to ${width}x${height}`)
+})
+```
+
+## Advanced Features
+
+### Split Screen Mode
+
+Reserve the bottom portion of the terminal for output:
+
+```typescript
+const renderer = await createCliRenderer({
+  experimental_splitHeight: 20, // Reserve 20 lines for OpenTUI
+})
+
+// Adjust split height dynamically
+renderer.experimental_splitHeight = 15
+```
+
+### Focus Management
+
+```typescript
+// Get currently focused renderable
+const focused = renderer.currentFocusedRenderable
+
+// Focus a specific renderable
+myInput.focus()
+
+// Listen for focus changes
+myInput.on("focused", () => console.log("Focused"))
+myInput.on("blurred", () => console.log("Blurred"))
+```
+
+### Debug Overlay
+
+Toggle the performance overlay:
+
+```typescript
+renderer.toggleDebugOverlay()
+
+// Or configure it
+renderer.configureDebugOverlay({
+  enabled: true,
+  corner: DebugOverlayCorner.topRight,
+})
+```
+
+### Clipboard (OSC 52)
+
+```typescript
+if (renderer.isOsc52Supported()) {
+  renderer.copyToClipboardOSC52("Hello, clipboard!")
+}
+```
+
+## Performance
+
+### Idle Detection
+
+Wait for the renderer to become idle:
+
+```typescript
+await renderer.idle()
+console.log("Renderer is idle - no pending renders")
+```
+
+### Stats Gathering
+
+```typescript
+const renderer = await createCliRenderer({
+  gatherStats: true,
+  maxStatSamples: 300,
+})
+
+// Access render stats
+const stats = renderer.renderStats
+console.log("FPS:", stats.fps)
+console.log("Frame time:", stats.renderTime)
+```
+
+## API Reference
+
+### Properties
+
+```typescript
+renderer.root: RootRenderable           // Root renderable
+renderer.width: number                  // Render width
+renderer.height: number                 // Render height
+renderer.themeMode: ThemeMode | null    // Current theme ("dark" | "light" | null)
+renderer.controlState: RendererControlState
+renderer.keyInput: KeyHandler           // Keyboard handler
+renderer.console: TerminalConsole       // Debug console
+renderer.isDestroyed: boolean          // Destruction state
+renderer.isRunning: boolean            // Render loop state
+```
+
+### Methods
+
+```typescript
+// Lifecycle
+renderer.start(): void                  // Start render loop
+renderer.stop(): void                   // Stop render loop
+renderer.pause(): void                  // Pause rendering
+renderer.resume(): void                 // Resume rendering
+renderer.destroy(): void                // Clean up and exit
+
+// Rendering
+renderer.requestRender(): void          // Request a single render
+await renderer.idle(): Promise<void>    // Wait until idle
+
+// Input
+renderer.useMouse = boolean             // Enable/disable mouse
+renderer.addInputHandler(handler)       // Add input handler
+renderer.removeInputHandler(handler)    // Remove input handler
+
+// Focus
+renderer.focusRenderable(r: Renderable) // Focus a renderable
+renderer.currentFocusedRenderable: Renderable | null
+
+// Terminal
+renderer.setTerminalTitle(title: string)
+renderer.setBackgroundColor(color: ColorInput)
+renderer.setCursorPosition(x: number, y: number, visible?: boolean)
+renderer.setCursorStyle(options: CursorStyleOptions)
+```
+
+## Events
+
+```typescript
+renderer.on("resize", (width: number, height: number) => {})
+renderer.on("theme_mode", (mode: ThemeMode) => {})
+renderer.on("focus", () => {})         // Terminal gained focus
+renderer.on("blur", () => {})          // Terminal lost focus
+renderer.on("destroy", () => {})
+renderer.on("debugOverlay:toggle", (enabled: boolean) => {})
+```

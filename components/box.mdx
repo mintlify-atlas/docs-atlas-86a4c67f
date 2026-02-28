@@ -1,0 +1,378 @@
+---
+title: 'Box'
+description: 'A flexible layout container with border and background styling support'
+---
+
+## Overview
+
+The `BoxRenderable` is a fundamental building block for creating layouts in OpenTUI. It provides a container with customizable borders, backgrounds, and full flexbox layout support through Yoga layout engine.
+
+## Basic Usage
+
+```typescript
+import { BoxRenderable } from '@opentui/core'
+
+const box = new BoxRenderable(renderer, {
+  id: 'my-box',
+  width: 'auto',
+  height: 20,
+  backgroundColor: '#1e293b',
+  border: true,
+  borderStyle: 'single',
+  borderColor: '#3b82f6',
+})
+
+renderer.root.add(box)
+```
+
+## Props
+
+### Layout Props
+
+<ParamField path="width" type="number | 'auto' | `${number}%`" default="'auto'">
+  The width of the box. Can be a fixed pixel value, percentage, or 'auto' to size based on content.
+</ParamField>
+
+<ParamField path="height" type="number | 'auto' | `${number}%`" default="'auto'">
+  The height of the box. Can be a fixed pixel value, percentage, or 'auto' to size based on content.
+</ParamField>
+
+<ParamField path="flexDirection" type="'row' | 'column' | 'row-reverse' | 'column-reverse'" default="'column'">
+  Sets the main axis direction for child elements.
+</ParamField>
+
+<ParamField path="flexGrow" type="number" default="0">
+  How much the box should grow relative to siblings when there's extra space.
+</ParamField>
+
+<ParamField path="flexShrink" type="number" default="1">
+  How much the box should shrink relative to siblings when space is constrained.
+</ParamField>
+
+<ParamField path="alignItems" type="'flex-start' | 'flex-end' | 'center' | 'stretch'" default="'flex-start'">
+  Alignment of children along the cross axis.
+</ParamField>
+
+<ParamField path="justifyContent" type="'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around'" default="'flex-start'">
+  Alignment of children along the main axis.
+</ParamField>
+
+<ParamField path="gap" type="number | `${number}%`">
+  Spacing between all children (both row and column gaps).
+</ParamField>
+
+<ParamField path="rowGap" type="number | `${number}%`">
+  Spacing between rows of children.
+</ParamField>
+
+<ParamField path="columnGap" type="number | `${number}%`">
+  Spacing between columns of children.
+</ParamField>
+
+### Spacing Props
+
+<ParamField path="padding" type="number | `${number}%`">
+  Padding on all sides.
+</ParamField>
+
+<ParamField path="paddingX" type="number | `${number}%`">
+  Horizontal padding (left and right).
+</ParamField>
+
+<ParamField path="paddingY" type="number | `${number}%`">
+  Vertical padding (top and bottom).
+</ParamField>
+
+<ParamField path="paddingTop" type="number | `${number}%`">
+  Padding on the top side.
+</ParamField>
+
+<ParamField path="paddingRight" type="number | `${number}%`">
+  Padding on the right side.
+</ParamField>
+
+<ParamField path="paddingBottom" type="number | `${number}%`">
+  Padding on the bottom side.
+</ParamField>
+
+<ParamField path="paddingLeft" type="number | `${number}%`">
+  Padding on the left side.
+</ParamField>
+
+<ParamField path="margin" type="number | `${number}%`">
+  Margin on all sides.
+</ParamField>
+
+<ParamField path="marginX" type="number | `${number}%`">
+  Horizontal margin (left and right).
+</ParamField>
+
+<ParamField path="marginY" type="number | `${number}%`">
+  Vertical margin (top and bottom).
+</ParamField>
+
+### Visual Props
+
+<ParamField path="backgroundColor" type="string | RGBA" default="'transparent'">
+  Background color as a hex string (e.g., '#1e293b') or RGBA object.
+</ParamField>
+
+<ParamField path="border" type="boolean | BorderSides[]" default="false">
+  Enable borders on all sides (true) or specify individual sides as an array: `['top', 'right', 'bottom', 'left']`.
+</ParamField>
+
+<ParamField path="borderStyle" type="'single' | 'double' | 'rounded' | 'bold' | 'singleDouble' | 'doubleSingle' | 'classic'" default="'single'">
+  The style of the border characters.
+</ParamField>
+
+<ParamField path="borderColor" type="string | RGBA" default="'#FFFFFF'">
+  Color of the border.
+</ParamField>
+
+<ParamField path="focusedBorderColor" type="string | RGBA" default="'#00AAFF'">
+  Border color when the box is focused (requires `focusable: true`).
+</ParamField>
+
+<ParamField path="customBorderChars" type="BorderCharacters">
+  Custom characters for border rendering. Object with keys: `topLeft`, `top`, `topRight`, `right`, `bottomRight`, `bottom`, `bottomLeft`, `left`.
+</ParamField>
+
+<ParamField path="shouldFill" type="boolean" default="true">
+  Whether to fill the box with the background color.
+</ParamField>
+
+<ParamField path="title" type="string">
+  Optional title text to display in the top border.
+</ParamField>
+
+<ParamField path="titleAlignment" type="'left' | 'center' | 'right'" default="'left'">
+  Alignment of the title text in the border.
+</ParamField>
+
+### Behavior Props
+
+<ParamField path="focusable" type="boolean" default="false">
+  Whether the box can receive keyboard focus.
+</ParamField>
+
+<ParamField path="visible" type="boolean" default="true">
+  Whether the box is visible.
+</ParamField>
+
+<ParamField path="zIndex" type="number" default="0">
+  Stacking order of the box. Higher values appear on top.
+</ParamField>
+
+<ParamField path="position" type="'relative' | 'absolute'" default="'relative'">
+  Positioning mode. Use 'absolute' with `left`, `right`, `top`, `bottom` props.
+</ParamField>
+
+## Examples
+
+### Three-Column Layout
+
+```typescript
+const container = new BoxRenderable(renderer, {
+  id: 'container',
+  flexDirection: 'row',
+  alignItems: 'stretch',
+  width: 'auto',
+  height: 'auto',
+  flexGrow: 1,
+})
+
+const leftSidebar = new BoxRenderable(renderer, {
+  id: 'left-sidebar',
+  width: 20,
+  backgroundColor: '#64748b',
+  border: true,
+  padding: 1,
+})
+
+const mainContent = new BoxRenderable(renderer, {
+  id: 'main-content',
+  flexGrow: 1,
+  backgroundColor: '#eab308',
+  border: true,
+  padding: 2,
+})
+
+const rightSidebar = new BoxRenderable(renderer, {
+  id: 'right-sidebar',
+  width: 20,
+  backgroundColor: '#7c3aed',
+  border: true,
+  padding: 1,
+})
+
+container.add(leftSidebar)
+container.add(mainContent)
+container.add(rightSidebar)
+
+renderer.root.add(container)
+```
+
+### Box with Title and Custom Border
+
+```typescript
+const dialog = new BoxRenderable(renderer, {
+  id: 'dialog',
+  width: 50,
+  height: 15,
+  backgroundColor: '#1e293b',
+  border: true,
+  borderStyle: 'double',
+  borderColor: '#3b82f6',
+  title: 'Settings',
+  titleAlignment: 'center',
+  padding: 2,
+})
+
+renderer.root.add(dialog)
+```
+
+### Absolute Positioned Box
+
+```typescript
+const overlay = new BoxRenderable(renderer, {
+  id: 'overlay',
+  position: 'absolute',
+  right: 1,
+  bottom: 1,
+  width: 20,
+  height: 3,
+  backgroundColor: '#22c55e',
+  border: true,
+  borderColor: '#16a34a',
+})
+
+renderer.root.add(overlay)
+```
+
+### Centered Content
+
+```typescript
+const centered = new BoxRenderable(renderer, {
+  id: 'centered',
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 'auto',
+  height: 'auto',
+  flexGrow: 1,
+  backgroundColor: '#0f172a',
+})
+
+const content = new BoxRenderable(renderer, {
+  id: 'content',
+  width: 40,
+  height: 10,
+  backgroundColor: '#7c3aed',
+  border: true,
+})
+
+centered.add(content)
+renderer.root.add(centered)
+```
+
+### Focusable Box with Highlight
+
+```typescript
+const focusBox = new BoxRenderable(renderer, {
+  id: 'focus-box',
+  width: 30,
+  height: 10,
+  backgroundColor: '#1e293b',
+  border: true,
+  borderColor: '#64748b',
+  focusedBorderColor: '#3b82f6',
+  focusable: true,
+  padding: 1,
+})
+
+renderer.root.add(focusBox)
+focusBox.focus()
+```
+
+### Gap and Spacing
+
+```typescript
+const gridContainer = new BoxRenderable(renderer, {
+  id: 'grid',
+  flexDirection: 'column',
+  gap: 2,
+  padding: 2,
+  backgroundColor: '#0f172a',
+  border: true,
+})
+
+for (let i = 0; i < 5; i++) {
+  const row = new BoxRenderable(renderer, {
+    id: `row-${i}`,
+    flexDirection: 'row',
+    columnGap: 2,
+    height: 3,
+  })
+
+  for (let j = 0; j < 3; j++) {
+    const cell = new BoxRenderable(renderer, {
+      id: `cell-${i}-${j}`,
+      flexGrow: 1,
+      backgroundColor: '#3b82f6',
+    })
+    row.add(cell)
+  }
+
+  gridContainer.add(row)
+}
+
+renderer.root.add(gridContainer)
+```
+
+## Methods
+
+### add(child: Renderable, index?: number): number
+
+Adds a child renderable to the box.
+
+```typescript
+const text = new TextRenderable(renderer, { content: 'Hello' })
+box.add(text)
+```
+
+### remove(id: string): void
+
+Removes a child by its ID.
+
+```typescript
+box.remove('child-id')
+```
+
+### focus(): void
+
+Sets focus to the box (requires `focusable: true`).
+
+```typescript
+box.focus()
+```
+
+### requestRender(): void
+
+Manually requests a re-render of the box.
+
+```typescript
+box.backgroundColor = '#ff0000'
+box.requestRender()
+```
+
+## Notes
+
+- Box uses the Yoga layout engine, which provides flexbox-like layout capabilities
+- Borders take up 1 cell on each enabled side, affecting the inner content area
+- When using percentage-based sizing, the value is relative to the parent container
+- The `shouldFill` prop controls whether the background color fills the entire box area
+- Absolute positioning takes the box out of the normal layout flow
+
+<Note>
+  For scrollable content areas, use [ScrollBox](/components/scrollbox) which wraps Box with scrolling functionality.
+</Note>

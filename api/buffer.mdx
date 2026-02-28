@@ -1,0 +1,675 @@
+---
+title: 'OptimizedBuffer'
+description: 'High-performance buffer for terminal rendering operations'
+---
+
+## Overview
+
+The `OptimizedBuffer` class provides a high-performance, double-buffered rendering system for terminal UIs. It manages character cells, colors, attributes, and supports advanced features like scissor rects, opacity, and various drawing primitives.
+
+## Creating a Buffer
+
+### OptimizedBuffer.create()
+
+Create a new optimized buffer.
+
+```typescript
+static create(
+  width: number,
+  height: number,
+  widthMethod: WidthMethod,
+  options?: { respectAlpha?: boolean; id?: string }
+): OptimizedBuffer
+```
+
+<ParamField path="width" type="number">
+  Width in terminal cells
+</ParamField>
+
+<ParamField path="height" type="number">
+  Height in terminal cells
+</ParamField>
+
+<ParamField path="widthMethod" type="'unicode' | 'wcwidth'">
+  Character width calculation method
+</ParamField>
+
+<ParamField path="options.respectAlpha" type="boolean" default={false}>
+  Whether to respect alpha channel in colors
+</ParamField>
+
+<ParamField path="options.id" type="string">
+  Optional identifier for debugging
+</ParamField>
+
+<ResponseField name="OptimizedBuffer" type="OptimizedBuffer">
+  The created buffer instance
+</ResponseField>
+
+#### Example
+
+```typescript
+import { OptimizedBuffer } from '@opentui/core'
+
+const buffer = OptimizedBuffer.create(80, 24, 'unicode', {
+  respectAlpha: true,
+  id: 'main-buffer'
+})
+```
+
+## Properties
+
+<ResponseField name="width" type="number">
+  Buffer width in cells (read-only)
+</ResponseField>
+
+<ResponseField name="height" type="number">
+  Buffer height in cells (read-only)
+</ResponseField>
+
+<ResponseField name="widthMethod" type="WidthMethod">
+  Character width calculation method (read-only)
+</ResponseField>
+
+<ResponseField name="respectAlpha" type="boolean">
+  Whether alpha blending is enabled
+</ResponseField>
+
+<ResponseField name="id" type="string">
+  Buffer identifier
+</ResponseField>
+
+## Basic Drawing Methods
+
+### clear()
+
+Clear the entire buffer with a background color.
+
+```typescript
+clear(bg?: RGBA): void
+```
+
+<ParamField path="bg" type="RGBA" default="RGBA.fromValues(0, 0, 0, 1)">
+  Background color
+</ParamField>
+
+#### Example
+
+```typescript
+import { RGBA } from '@opentui/core'
+
+buffer.clear(RGBA.fromHex('#1a1a1a'))
+```
+
+### setCell()
+
+Set a single cell's character, colors, and attributes.
+
+```typescript
+setCell(
+  x: number,
+  y: number,
+  char: string,
+  fg: RGBA,
+  bg: RGBA,
+  attributes?: number
+): void
+```
+
+<ParamField path="x" type="number">
+  X coordinate (column)
+</ParamField>
+
+<ParamField path="y" type="number">
+  Y coordinate (row)
+</ParamField>
+
+<ParamField path="char" type="string">
+  Character to display (single character or grapheme cluster)
+</ParamField>
+
+<ParamField path="fg" type="RGBA">
+  Foreground color
+</ParamField>
+
+<ParamField path="bg" type="RGBA">
+  Background color
+</ParamField>
+
+<ParamField path="attributes" type="number" default={0}>
+  Text attributes (bold, italic, underline, etc.)
+</ParamField>
+
+### setCellWithAlphaBlending()
+
+Set a cell with alpha blending.
+
+```typescript
+setCellWithAlphaBlending(
+  x: number,
+  y: number,
+  char: string,
+  fg: RGBA,
+  bg: RGBA,
+  attributes?: number
+): void
+```
+
+Parameters are the same as `setCell()`, but colors are blended with existing colors based on alpha values.
+
+### drawText()
+
+Draw text at a position.
+
+```typescript
+drawText(
+  text: string,
+  x: number,
+  y: number,
+  fg: RGBA,
+  bg?: RGBA,
+  attributes?: number,
+  selection?: {
+    start: number
+    end: number
+    bgColor?: RGBA
+    fgColor?: RGBA
+  } | null
+): void
+```
+
+<ParamField path="text" type="string">
+  Text to draw
+</ParamField>
+
+<ParamField path="x" type="number">
+  X coordinate (starting column)
+</ParamField>
+
+<ParamField path="y" type="number">
+  Y coordinate (row)
+</ParamField>
+
+<ParamField path="fg" type="RGBA">
+  Foreground color
+</ParamField>
+
+<ParamField path="bg" type="RGBA">
+  Background color (optional)
+</ParamField>
+
+<ParamField path="attributes" type="number" default={0}>
+  Text attributes
+</ParamField>
+
+<ParamField path="selection" type="object">
+  Optional selection range to highlight
+</ParamField>
+
+#### Example
+
+```typescript
+buffer.drawText('Hello, World!', 10, 5, 
+  RGBA.fromHex('#ffffff'),
+  RGBA.fromHex('#000000')
+)
+
+// With selection
+buffer.drawText('Select this', 0, 0,
+  RGBA.fromHex('#ffffff'),
+  RGBA.fromHex('#000000'),
+  0,
+  { start: 7, end: 11, bgColor: RGBA.fromHex('#0066cc') }
+)
+```
+
+### fillRect()
+
+Fill a rectangular area with a color.
+
+```typescript
+fillRect(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  bg: RGBA
+): void
+```
+
+<ParamField path="x" type="number">
+  X coordinate
+</ParamField>
+
+<ParamField path="y" type="number">
+  Y coordinate
+</ParamField>
+
+<ParamField path="width" type="number">
+  Rectangle width
+</ParamField>
+
+<ParamField path="height" type="number">
+  Rectangle height
+</ParamField>
+
+<ParamField path="bg" type="RGBA">
+  Fill color
+</ParamField>
+
+### drawBox()
+
+Draw a bordered box with optional title.
+
+```typescript
+drawBox(options: {
+  x: number
+  y: number
+  width: number
+  height: number
+  borderStyle?: BorderStyle
+  customBorderChars?: Uint32Array
+  border: boolean | BorderSides[]
+  borderColor: RGBA
+  backgroundColor: RGBA
+  shouldFill?: boolean
+  title?: string
+  titleAlignment?: 'left' | 'center' | 'right'
+}): void
+```
+
+<ParamField path="options.x" type="number">
+  X coordinate
+</ParamField>
+
+<ParamField path="options.y" type="number">
+  Y coordinate
+</ParamField>
+
+<ParamField path="options.width" type="number">
+  Box width
+</ParamField>
+
+<ParamField path="options.height" type="number">
+  Box height
+</ParamField>
+
+<ParamField path="options.borderStyle" type="'single' | 'double' | 'rounded' | 'bold' | 'double-single' | 'single-double'">
+  Border style preset
+</ParamField>
+
+<ParamField path="options.border" type="boolean | ('top' | 'right' | 'bottom' | 'left')[]">
+  Which borders to draw (true = all sides)
+</ParamField>
+
+<ParamField path="options.borderColor" type="RGBA">
+  Border color
+</ParamField>
+
+<ParamField path="options.backgroundColor" type="RGBA">
+  Background color
+</ParamField>
+
+<ParamField path="options.shouldFill" type="boolean" default={false}>
+  Whether to fill the box interior
+</ParamField>
+
+<ParamField path="options.title" type="string">
+  Optional title text
+</ParamField>
+
+<ParamField path="options.titleAlignment" type="'left' | 'center' | 'right'" default="'left'">
+  Title alignment
+</ParamField>
+
+#### Example
+
+```typescript
+buffer.drawBox({
+  x: 5,
+  y: 5,
+  width: 30,
+  height: 10,
+  borderStyle: 'rounded',
+  border: true,
+  borderColor: RGBA.fromHex('#666666'),
+  backgroundColor: RGBA.fromHex('#000000'),
+  shouldFill: true,
+  title: 'My Window',
+  titleAlignment: 'center'
+})
+```
+
+## Advanced Drawing
+
+### drawFrameBuffer()
+
+Draw another buffer onto this buffer (compositing).
+
+```typescript
+drawFrameBuffer(
+  destX: number,
+  destY: number,
+  frameBuffer: OptimizedBuffer,
+  sourceX?: number,
+  sourceY?: number,
+  sourceWidth?: number,
+  sourceHeight?: number
+): void
+```
+
+<ParamField path="destX" type="number">
+  Destination X coordinate
+</ParamField>
+
+<ParamField path="destY" type="number">
+  Destination Y coordinate
+</ParamField>
+
+<ParamField path="frameBuffer" type="OptimizedBuffer">
+  Source buffer to draw
+</ParamField>
+
+<ParamField path="sourceX" type="number">
+  Optional source X (for partial copy)
+</ParamField>
+
+<ParamField path="sourceY" type="number">
+  Optional source Y
+</ParamField>
+
+<ParamField path="sourceWidth" type="number">
+  Optional source width
+</ParamField>
+
+<ParamField path="sourceHeight" type="number">
+  Optional source height
+</ParamField>
+
+### drawGrid()
+
+Draw a grid with borders.
+
+```typescript
+drawGrid(options: {
+  borderChars: Uint32Array
+  borderFg: RGBA
+  borderBg: RGBA
+  columnOffsets: Int32Array
+  rowOffsets: Int32Array
+  drawInner: boolean
+  drawOuter: boolean
+}): void
+```
+
+<ParamField path="options.borderChars" type="Uint32Array">
+  Border characters (9 elements: TL, T, TR, L, C, R, BL, B, BR)
+</ParamField>
+
+<ParamField path="options.borderFg" type="RGBA">
+  Border foreground color
+</ParamField>
+
+<ParamField path="options.borderBg" type="RGBA">
+  Border background color
+</ParamField>
+
+<ParamField path="options.columnOffsets" type="Int32Array">
+  Array of column X positions
+</ParamField>
+
+<ParamField path="options.rowOffsets" type="Int32Array">
+  Array of row Y positions
+</ParamField>
+
+<ParamField path="options.drawInner" type="boolean">
+  Draw inner grid lines
+</ParamField>
+
+<ParamField path="options.drawOuter" type="boolean">
+  Draw outer border
+</ParamField>
+
+## Clipping and Opacity
+
+### pushScissorRect()
+
+Push a clipping rectangle (subsequent draws are clipped to this region).
+
+```typescript
+pushScissorRect(x: number, y: number, width: number, height: number): void
+```
+
+<ParamField path="x" type="number">
+  X coordinate
+</ParamField>
+
+<ParamField path="y" type="number">
+  Y coordinate
+</ParamField>
+
+<ParamField path="width" type="number">
+  Rectangle width
+</ParamField>
+
+<ParamField path="height" type="number">
+  Rectangle height
+</ParamField>
+
+### popScissorRect()
+
+Remove the most recent scissor rectangle.
+
+```typescript
+popScissorRect(): void
+```
+
+### clearScissorRects()
+
+Remove all scissor rectangles.
+
+```typescript
+clearScissorRects(): void
+```
+
+### pushOpacity()
+
+Push an opacity level (0 = transparent, 1 = opaque). Opacity levels are multiplied.
+
+```typescript
+pushOpacity(opacity: number): void
+```
+
+<ParamField path="opacity" type="number">
+  Opacity value (0-1)
+</ParamField>
+
+### popOpacity()
+
+Remove the most recent opacity level.
+
+```typescript
+popOpacity(): void
+```
+
+### getCurrentOpacity()
+
+Get the current composite opacity.
+
+```typescript
+getCurrentOpacity(): number
+```
+
+<ResponseField name="number" type="number">
+  Current opacity value
+</ResponseField>
+
+### clearOpacity()
+
+Remove all opacity levels.
+
+```typescript
+clearOpacity(): void
+```
+
+## Buffer Management
+
+### resize()
+
+Resize the buffer.
+
+```typescript
+resize(width: number, height: number): void
+```
+
+<ParamField path="width" type="number">
+  New width
+</ParamField>
+
+<ParamField path="height" type="number">
+  New height
+</ParamField>
+
+### destroy()
+
+Destroy the buffer and free resources.
+
+```typescript
+destroy(): void
+```
+
+### setRespectAlpha()
+
+Enable or disable alpha blending.
+
+```typescript
+setRespectAlpha(respectAlpha: boolean): void
+```
+
+<ParamField path="respectAlpha" type="boolean">
+  Whether to respect alpha channel
+</ParamField>
+
+## Advanced Features
+
+### getSpanLines()
+
+Get buffer content as structured spans (for text extraction, testing).
+
+```typescript
+getSpanLines(): CapturedLine[]
+```
+
+<ResponseField name="CapturedLine[]" type="CapturedLine[]">
+  Array of lines with styled spans
+</ResponseField>
+
+#### CapturedLine Structure
+
+```typescript
+interface CapturedLine {
+  spans: CapturedSpan[]
+}
+
+interface CapturedSpan {
+  text: string
+  fg: RGBA
+  bg: RGBA
+  attributes: number
+  width: number
+}
+```
+
+### getRealCharBytes()
+
+Get the raw character data as UTF-8 bytes.
+
+```typescript
+getRealCharBytes(addLineBreaks?: boolean): Uint8Array
+```
+
+<ParamField path="addLineBreaks" type="boolean" default={false}>
+  Whether to add line breaks between rows
+</ParamField>
+
+<ResponseField name="Uint8Array" type="Uint8Array">
+  UTF-8 encoded character data
+</ResponseField>
+
+### Raw Buffer Access
+
+#### buffers
+
+Access raw buffer arrays (advanced use only).
+
+```typescript
+get buffers(): {
+  char: Uint32Array
+  fg: Float32Array
+  bg: Float32Array
+  attributes: Uint32Array
+}
+```
+
+<ResponseField name="char" type="Uint32Array">
+  Character codepoints (with flags)
+</ResponseField>
+
+<ResponseField name="fg" type="Float32Array">
+  Foreground colors (RGBA, 4 floats per cell)
+</ResponseField>
+
+<ResponseField name="bg" type="Float32Array">
+  Background colors (RGBA, 4 floats per cell)
+</ResponseField>
+
+<ResponseField name="attributes" type="Uint32Array">
+  Text attributes (bold, italic, etc.)
+</ResponseField>
+
+## Example Usage
+
+```typescript
+import { OptimizedBuffer, RGBA } from '@opentui/core'
+
+const buffer = OptimizedBuffer.create(80, 24, 'unicode')
+
+// Clear with dark background
+buffer.clear(RGBA.fromHex('#1a1a1a'))
+
+// Draw a box
+buffer.drawBox({
+  x: 10,
+  y: 5,
+  width: 60,
+  height: 14,
+  borderStyle: 'rounded',
+  border: true,
+  borderColor: RGBA.fromHex('#666666'),
+  backgroundColor: RGBA.fromHex('#000000'),
+  shouldFill: true,
+  title: 'Console Output',
+  titleAlignment: 'center'
+})
+
+// Draw text inside
+buffer.drawText('Hello, World!', 15, 8,
+  RGBA.fromHex('#00ff00'),
+  RGBA.fromHex('#000000')
+)
+
+// Use scissor rect for clipping
+buffer.pushScissorRect(10, 5, 60, 14)
+buffer.drawText('This text is clipped', 5, 6,
+  RGBA.fromHex('#ffffff')
+)
+buffer.popScissorRect()
+
+// Use opacity
+buffer.pushOpacity(0.5)
+buffer.fillRect(20, 10, 40, 5, RGBA.fromHex('#ff0000'))
+buffer.popOpacity()
+
+// Cleanup
+buffer.destroy()
+```

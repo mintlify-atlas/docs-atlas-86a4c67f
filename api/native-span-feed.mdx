@@ -1,0 +1,246 @@
+---
+title: NativeSpanFeed
+description: Zero-copy streaming interface for processing terminal output
+---
+
+## Overview
+
+`NativeSpanFeed` is a zero-copy wrapper over native Zig memory for efficient streaming of terminal output. It manages chunks of data in native memory and provides spans (slices) to TypeScript without copying.
+
+<Note>
+This is **not** a full stream interface - it's optimized for zero-copy access to native memory buffers.
+</Note>
+
+## Creating a Stream
+
+<ParamField path="NativeSpanFeed.create" type="function">
+  Create a new native span feed stream
+
+  ```typescript
+  static create(options?: NativeSpanFeedOptions): NativeSpanFeed
+  ```
+
+  <ParamField path="options" type="NativeSpanFeedOptions">
+    Stream configuration options
+  </ParamField>
+</ParamField>
+
+<ParamField path="NativeSpanFeed.attach" type="function">
+  Attach to an existing native stream by pointer
+
+  ```typescript
+  static attach(
+    streamPtr: bigint | number,
+    options?: NativeSpanFeedOptions
+  ): NativeSpanFeed
+  ```
+
+  <ParamField path="streamPtr" type="bigint | number" required>
+    Native pointer to existing stream
+  </ParamField>
+</ParamField>
+
+## Options
+
+<ParamField path="NativeSpanFeedOptions" type="object">
+  Configuration for span feed behavior
+
+  ```typescript
+  interface NativeSpanFeedOptions {
+    initialChunkSize?: number
+    maxChunkSize?: number
+    chunkGrowthPolicy?: GrowthPolicy
+  }
+  ```
+
+  <ParamField path="initialChunkSize" type="number">
+    Initial size for memory chunks
+  </ParamField>
+
+  <ParamField path="maxChunkSize" type="number">
+    Maximum size for memory chunks
+  </ParamField>
+
+  <ParamField path="chunkGrowthPolicy" type="GrowthPolicy">
+    How chunks grow when more space is needed
+  </ParamField>
+</ParamField>
+
+## Event Handlers
+
+<ParamField path="onData" type="function">
+  Register a handler for data availability
+
+  ```typescript
+  onData(handler: DataHandler): () => void
+  ```
+
+  <ParamField path="handler" type="(data: Uint8Array) => void | Promise<void>" required>
+    Callback invoked when data is available. Receives a zero-copy view into native memory.
+  </ParamField>
+
+  **Returns**: Cleanup function to unregister the handler
+
+  <Note>
+  The `Uint8Array` provided to your handler is a **view** into native memory. Do not retain references to it after the handler returns. If you need the data later, copy it.
+  </Note>
+</ParamField>
+
+<ParamField path="onError" type="function">
+  Register an error handler
+
+  ```typescript
+  onError(handler: (code: number) => void): () => void
+  ```
+
+  <ParamField path="handler" type="(code: number) => void" required>
+    Callback invoked on error with error code
+  </ParamField>
+
+  **Returns**: Cleanup function to unregister the handler
+</ParamField>
+
+## Stream Control
+
+<ParamField path="drainAll" type="function">
+  Manually drain all available data
+
+  ```typescript
+  drainAll(): void
+  ```
+
+  Calls registered data handlers for all pending spans. Usually not needed as data is drained automatically when handlers are registered.
+</ParamField>
+
+<ParamField path="close" type="function">
+  Close the stream and free resources
+
+  ```typescript
+  close(): void
+  ```
+
+  <Warning>
+  After calling `close()`, the stream cannot be reused. Do not call any methods on a closed stream.
+  </Warning>
+</ParamField>
+
+## Properties
+
+<ParamField path="streamPtr" type="Pointer" readonly>
+  Native pointer to the underlying stream
+</ParamField>
+
+## Types
+
+### DataHandler
+
+```typescript
+type DataHandler = (data: Uint8Array) => void | Promise<void>
+```
+
+Data handlers can be synchronous or asynchronous. Async handlers keep the underlying memory chunk pinned until the promise resolves.
+
+### GrowthPolicy
+
+Controls how memory chunks grow:
+
+- `"linear"` - Add fixed amount each time
+- `"exponential"` - Double size each time
+- `"fibonacci"` - Use Fibonacci sequence
+
+### NativeSpanFeedStats
+
+```typescript
+interface NativeSpanFeedStats {
+  totalBytesWritten: number
+  totalChunks: number
+  activeChunks: number
+  drainedSpans: number
+}
+```
+
+## Example: Basic Usage
+
+```typescript
+import { NativeSpanFeed } from "@opentui/core"
+
+// Create stream with custom options
+const stream = NativeSpanFeed.create({
+  initialChunkSize: 4096,
+  maxChunkSize: 1024 * 1024,
+  chunkGrowthPolicy: "exponential"
+})
+
+// Register data handler
+const unsubscribe = stream.onData((data) => {
+  // Process the data
+  const text = new TextDecoder().decode(data)
+  console.log("Received:", text)
+  
+  // Don't keep references to 'data' after this returns!
+})
+
+// Register error handler
+stream.onError((code) => {
+  console.error("Stream error:", code)
+})
+
+// When done
+unsubscribe()
+stream.close()
+```
+
+## Example: Async Handler
+
+```typescript
+const stream = NativeSpanFeed.create()
+
+stream.onData(async (data) => {
+  // The chunk is pinned while this promise is pending
+  const text = new TextDecoder().decode(data)
+  await processTextAsync(text)
+  // Chunk is released after promise resolves
+})
+```
+
+## Example: Copy Data for Later Use
+
+```typescript
+const chunks: Uint8Array[] = []
+
+stream.onData((data) => {
+  // Must copy if you want to retain the data
+  const copy = new Uint8Array(data.length)
+  copy.set(data)
+  chunks.push(copy)
+})
+```
+
+## Memory Management
+
+The native span feed uses a sophisticated memory management system:
+
+1. **Chunks**: Data is allocated in chunks in native memory
+2. **Spans**: Each data callback receives a span (slice) of a chunk
+3. **Reference Counting**: Chunks are reference counted and freed when no longer needed
+4. **Zero-Copy**: Data is never copied from native memory to JavaScript unless you explicitly copy it
+
+### Lifecycle
+
+1. Data is written to a chunk in native memory
+2. When data is available, the stream emits a "data available" event
+3. Your handler receives a `Uint8Array` view into the chunk
+4. After your handler returns (or async handler resolves), the reference count is decremented
+5. When a chunk's reference count reaches zero, it's freed
+
+<Warning>
+**Critical**: The `Uint8Array` passed to your handler is only valid during the handler execution. Do not store references to it. If you need the data later, copy it to a new array.
+</Warning>
+
+## Performance Tips
+
+- Use synchronous handlers when possible (async handlers keep chunks pinned longer)
+- Process data immediately in the handler rather than queuing it
+- If you must store data, copy only what you need
+- Consider using `drainAll()` if you want to batch process multiple spans
+- Unregister handlers when no longer needed to avoid memory leaks

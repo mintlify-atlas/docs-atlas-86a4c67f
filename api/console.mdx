@@ -1,0 +1,536 @@
+---
+title: 'Console'
+description: 'Interactive console overlay for logging, debugging, and user interaction'
+---
+
+## Overview
+
+The console overlay provides a built-in logging and debugging interface that can be toggled on/off during runtime. It captures `console.log`, `console.error`, etc., and displays them in an interactive overlay with scrolling, searching, and log saving capabilities.
+
+## Accessing the Console
+
+The console is available through the renderer:
+
+```typescript
+import { createCliRenderer } from '@opentui/core'
+
+const renderer = await createCliRenderer()
+const console = renderer.console
+```
+
+## ConsoleOptions
+
+Configuration options for the console overlay.
+
+<ParamField path="position" type="'top' | 'bottom' | 'left' | 'right'" default="'bottom'">
+  Console position on screen
+</ParamField>
+
+<ParamField path="sizePercent" type="number" default={30}>
+  Console size as percentage of screen (10-100)
+</ParamField>
+
+<ParamField path="zIndex" type="number" default={Infinity}>
+  Z-index for rendering order
+</ParamField>
+
+<ParamField path="colorInfo" type="ColorInput" default="'#00FFFF'">
+  Color for INFO level logs
+</ParamField>
+
+<ParamField path="colorWarn" type="ColorInput" default="'#FFFF00'">
+  Color for WARN level logs
+</ParamField>
+
+<ParamField path="colorError" type="ColorInput" default="'#FF0000'">
+  Color for ERROR level logs
+</ParamField>
+
+<ParamField path="colorDebug" type="ColorInput" default="'#808080'">
+  Color for DEBUG level logs
+</ParamField>
+
+<ParamField path="colorDefault" type="ColorInput" default="'#FFFFFF'">
+  Color for default/LOG level logs
+</ParamField>
+
+<ParamField path="backgroundColor" type="ColorInput" default="RGBA.fromValues(0.1, 0.1, 0.1, 0.7)">
+  Console background color (supports transparency)
+</ParamField>
+
+<ParamField path="startInDebugMode" type="boolean" default={false}>
+  Start with debug mode enabled (shows caller info)
+</ParamField>
+
+<ParamField path="title" type="string" default="'Console'">
+  Console title bar text
+</ParamField>
+
+<ParamField path="titleBarColor" type="ColorInput" default="RGBA.fromValues(0.05, 0.05, 0.05, 0.7)">
+  Title bar background color
+</ParamField>
+
+<ParamField path="titleBarTextColor" type="ColorInput" default="'#FFFFFF'">
+  Title bar text color
+</ParamField>
+
+<ParamField path="cursorColor" type="ColorInput" default="'#00A0FF'">
+  Cursor color (when focused)
+</ParamField>
+
+<ParamField path="maxStoredLogs" type="number" default={2000}>
+  Maximum number of log entries to keep
+</ParamField>
+
+<ParamField path="maxDisplayLines" type="number" default={3000}>
+  Maximum number of display lines (wrapped)
+</ParamField>
+
+<ParamField path="onCopySelection" type="(text: string) => void">
+  Callback when text is copied
+</ParamField>
+
+<ParamField path="keyBindings" type="ConsoleKeyBinding[]">
+  Custom key bindings
+</ParamField>
+
+<ParamField path="keyAliasMap" type="KeyAliasMap">
+  Custom key aliases
+</ParamField>
+
+<ParamField path="selectionColor" type="ColorInput" default="RGBA.fromValues(0.3, 0.5, 0.8, 0.5)">
+  Text selection highlight color
+</ParamField>
+
+<ParamField path="copyButtonColor" type="ColorInput" default="'#00A0FF'">
+  Copy button text color
+</ParamField>
+
+## Creating a Configured Console
+
+```typescript
+import { createCliRenderer } from '@opentui/core'
+import { RGBA } from '@opentui/core'
+
+const renderer = await createCliRenderer({
+  consoleOptions: {
+    position: 'bottom',
+    sizePercent: 40,
+    colorInfo: '#00ffff',
+    colorError: '#ff3333',
+    backgroundColor: RGBA.fromValues(0, 0, 0, 0.9),
+    startInDebugMode: true,
+    onCopySelection: (text) => {
+      // Custom copy handler (e.g., use clipboard API)
+      console.log('Copied:', text)
+    }
+  }
+})
+```
+
+## TerminalConsole Class
+
+### Properties
+
+<ResponseField name="visible" type="boolean">
+  Whether the console is currently visible
+</ResponseField>
+
+<ResponseField name="bounds" type="{ x: number; y: number; width: number; height: number }">
+  Console position and size
+</ResponseField>
+
+### Methods
+
+#### show()
+
+Show the console overlay.
+
+```typescript
+show(): void
+```
+
+#### hide()
+
+Hide the console overlay.
+
+```typescript
+hide(): void
+```
+
+#### toggle()
+
+Toggle console visibility (or toggle focus if already visible).
+
+```typescript
+toggle(): void
+```
+
+#### focus()
+
+Give keyboard focus to the console.
+
+```typescript
+focus(): void
+```
+
+#### blur()
+
+Remove keyboard focus from the console.
+
+```typescript
+blur(): void
+```
+
+#### clear()
+
+Clear all console logs.
+
+```typescript
+clear(): void
+```
+
+#### resize()
+
+Resize the console (usually called automatically).
+
+```typescript
+resize(width: number, height: number): void
+```
+
+<ParamField path="width" type="number">
+  New terminal width
+</ParamField>
+
+<ParamField path="height" type="number">
+  New terminal height
+</ParamField>
+
+#### setDebugMode()
+
+Enable or disable debug mode (shows file/line caller info).
+
+```typescript
+setDebugMode(enabled: boolean): void
+```
+
+<ParamField path="enabled" type="boolean">
+  Whether to enable debug mode
+</ParamField>
+
+#### toggleDebugMode()
+
+Toggle debug mode.
+
+```typescript
+toggleDebugMode(): void
+```
+
+#### activate()
+
+Activate console capture (intercepts console.log, etc.).
+
+```typescript
+activate(): void
+```
+
+#### deactivate()
+
+Deactivate console capture (restore original console).
+
+```typescript
+deactivate(): void
+```
+
+#### destroy()
+
+Destroy the console and clean up.
+
+```typescript
+destroy(): void
+```
+
+#### getCachedLogs()
+
+Get cached logs as a formatted string.
+
+```typescript
+getCachedLogs(): string
+```
+
+<ResponseField name="string" type="string">
+  Formatted log entries
+</ResponseField>
+
+#### renderToBuffer()
+
+Render the console to a buffer (called automatically).
+
+```typescript
+renderToBuffer(buffer: OptimizedBuffer): void
+```
+
+<ParamField path="buffer" type="OptimizedBuffer">
+  Target buffer to render to
+</ParamField>
+
+#### handleMouse()
+
+Handle mouse events (called automatically).
+
+```typescript
+handleMouse(event: MouseEvent): boolean
+```
+
+<ParamField path="event" type="MouseEvent">
+  Mouse event to handle
+</ParamField>
+
+<ResponseField name="boolean" type="boolean">
+  Whether the event was handled
+</ResponseField>
+
+### Setters
+
+#### keyBindings
+
+Set custom key bindings.
+
+```typescript
+set keyBindings(bindings: ConsoleKeyBinding[])
+```
+
+<ParamField path="bindings" type="ConsoleKeyBinding[]">
+  Array of key binding configurations
+</ParamField>
+
+#### keyAliasMap
+
+Set custom key aliases.
+
+```typescript
+set keyAliasMap(aliases: KeyAliasMap)
+```
+
+<ParamField path="aliases" type="KeyAliasMap">
+  Map of key aliases
+</ParamField>
+
+#### onCopySelection
+
+Set the copy selection callback.
+
+```typescript
+set onCopySelection(callback: ((text: string) => void) | undefined)
+```
+
+<ParamField path="callback" type="(text: string) => void">
+  Callback function
+</ParamField>
+
+## Default Key Bindings
+
+<ParamField path="Up Arrow" type="key">
+  Scroll up one line
+</ParamField>
+
+<ParamField path="Down Arrow" type="key">
+  Scroll down one line
+</ParamField>
+
+<ParamField path="Shift+Up Arrow" type="key">
+  Scroll to top
+</ParamField>
+
+<ParamField path="Shift+Down Arrow" type="key">
+  Scroll to bottom
+</ParamField>
+
+<ParamField path="Ctrl+P" type="key">
+  Move console to previous position (top → right → bottom → left)
+</ParamField>
+
+<ParamField path="Ctrl+O" type="key">
+  Move console to next position (top → left → bottom → right)
+</ParamField>
+
+<ParamField path="+ or Shift+=" type="key">
+  Increase console size by 5%
+</ParamField>
+
+<ParamField path="-" type="key">
+  Decrease console size by 5%
+</ParamField>
+
+<ParamField path="Ctrl+S" type="key">
+  Save logs to file (_console_[timestamp].log)
+</ParamField>
+
+<ParamField path="Ctrl+Shift+C" type="key">
+  Copy selected text
+</ParamField>
+
+<ParamField path="Escape" type="key">
+  Blur console (unfocus)
+</ParamField>
+
+## ConsoleKeyBinding
+
+Type for console key binding configuration.
+
+```typescript
+type ConsoleKeyBinding = {
+  name: string
+  ctrl?: boolean
+  shift?: boolean
+  meta?: boolean
+  super?: boolean
+  action: ConsoleAction
+}
+```
+
+<ParamField path="name" type="string">
+  Key name (e.g., 'up', 'down', 'c', 's')
+</ParamField>
+
+<ParamField path="ctrl" type="boolean">
+  Ctrl modifier
+</ParamField>
+
+<ParamField path="shift" type="boolean">
+  Shift modifier
+</ParamField>
+
+<ParamField path="meta" type="boolean">
+  Meta/Alt modifier
+</ParamField>
+
+<ParamField path="super" type="boolean">
+  Super/Cmd modifier
+</ParamField>
+
+<ParamField path="action" type="ConsoleAction">
+  Action to perform
+</ParamField>
+
+## ConsoleAction
+
+Available console actions.
+
+- `scroll-up` - Scroll up one line
+- `scroll-down` - Scroll down one line  
+- `scroll-to-top` - Scroll to the top
+- `scroll-to-bottom` - Scroll to the bottom
+- `position-previous` - Move to previous position
+- `position-next` - Move to next position
+- `size-increase` - Increase size by 5%
+- `size-decrease` - Decrease size by 5%
+- `save-logs` - Save logs to file
+- `copy-selection` - Copy selected text
+
+## ConsolePosition
+
+Enum for console position.
+
+```typescript
+enum ConsolePosition {
+  TOP = 'top',
+  BOTTOM = 'bottom',
+  LEFT = 'left',
+  RIGHT = 'right',
+}
+```
+
+## Example Usage
+
+### Basic Usage
+
+```typescript
+import { createCliRenderer } from '@opentui/core'
+
+const renderer = await createCliRenderer()
+
+// Show console
+renderer.console.show()
+
+// Log some messages
+console.log('Hello, World!')
+console.info('Info message')
+console.warn('Warning message')
+console.error('Error message')
+
+// Toggle console visibility
+renderer.console.toggle()
+```
+
+### Custom Configuration
+
+```typescript
+import { createCliRenderer, RGBA } from '@opentui/core'
+
+const renderer = await createCliRenderer({
+  consoleOptions: {
+    position: 'right',
+    sizePercent: 50,
+    title: 'Debug Console',
+    colorError: '#ff0000',
+    colorWarn: '#ffaa00',
+    colorInfo: '#00aaff',
+    backgroundColor: RGBA.fromValues(0.05, 0.05, 0.05, 0.95),
+    startInDebugMode: true,
+    keyBindings: [
+      { name: 'k', ctrl: true, action: 'scroll-up' },
+      { name: 'j', ctrl: true, action: 'scroll-down' },
+    ],
+    onCopySelection: async (text) => {
+      // Use clipboard API or OSC 52
+      renderer.copyToClipboardOSC52(text)
+      console.log('Copied to clipboard')
+    },
+  },
+})
+
+renderer.console.show()
+```
+
+### Using Console Methods
+
+```typescript
+const console = renderer.console
+
+// Show and focus
+console.show()
+console.focus()
+
+// Enable debug mode (shows file:line)
+console.setDebugMode(true)
+
+// Clear logs
+console.clear()
+
+// Toggle visibility
+console.toggle()
+
+// Get cached logs
+const logs = console.getCachedLogs()
+console.log('Cached logs:', logs)
+
+// Cleanup
+console.destroy()
+```
+
+### Mouse Interaction
+
+The console supports mouse interaction:
+
+- **Scroll wheel** - Scroll up/down
+- **Click and drag** - Select text
+- **Click copy button** - Copy selected text (if `onCopySelection` is set)
+- **Auto-scroll** - Automatically scrolls when dragging near edges
+
+### Environment Variables
+
+The console respects these environment variables:
+
+- `OTUI_USE_CONSOLE` - Enable/disable console capture (default: `true`)
+- `SHOW_CONSOLE` - Show console at startup (default: `false`)

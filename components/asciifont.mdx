@@ -1,0 +1,411 @@
+---
+title: ASCIIFont
+description: Render large ASCII art text using decorative fonts
+---
+
+## Overview
+
+ASCIIFontRenderable renders text in large ASCII art fonts. It supports multiple font styles, gradient colors, text selection, and transparent backgrounds. Perfect for headers, logos, and decorative text in terminal UIs.
+
+## Basic Usage
+
+```typescript
+import { ASCIIFontRenderable, createCliRenderer } from '@opentui/core'
+
+const renderer = await createCliRenderer()
+
+const title = new ASCIIFontRenderable(renderer, {
+  text: 'OpenTUI',
+  font: 'block',
+  color: '#00ff00',
+})
+
+renderer.root.add(title)
+```
+
+## Available Fonts
+
+```typescript
+// Tiny - compact font
+const tiny = new ASCIIFontRenderable(renderer, {
+  text: 'TINY FONT',
+  font: 'tiny',
+  color: '#ffff00',
+})
+
+// Block - bold block letters
+const block = new ASCIIFontRenderable(renderer, {
+  text: 'BLOCK',
+  font: 'block',
+  color: '#ff6b6b',
+})
+
+// Shade - shaded 3D effect
+const shade = new ASCIIFontRenderable(renderer, {
+  text: 'SHADE',
+  font: 'shade',
+  color: '#4ecdc4',
+})
+
+// Slick - clean modern style
+const slick = new ASCIIFontRenderable(renderer, {
+  text: 'SLICK',
+  font: 'slick',
+  color: '#95e1d3',
+})
+
+// Huge - very large letters
+const huge = new ASCIIFontRenderable(renderer, {
+  text: 'HUGE',
+  font: 'huge',
+  color: '#f38181',
+})
+
+// Grid - grid-based design
+const grid = new ASCIIFontRenderable(renderer, {
+  text: 'GRID',
+  font: 'grid',
+  color: '#aa96da',
+})
+
+// Pallet - palette-style font
+const pallet = new ASCIIFontRenderable(renderer, {
+  text: 'PALLET',
+  font: 'pallet',
+  color: '#fcbad3',
+})
+```
+
+## Gradient Colors
+
+```typescript
+import { RGBA } from '@opentui/core'
+
+// Two-color gradient
+const gradient = new ASCIIFontRenderable(renderer, {
+  text: 'GRADIENT',
+  font: 'block',
+  color: [
+    RGBA.fromInts(255, 100, 100, 255),
+    RGBA.fromInts(100, 100, 255, 255),
+  ],
+})
+
+// Multi-color gradient
+const rainbow = new ASCIIFontRenderable(renderer, {
+  text: 'RAINBOW',
+  font: 'shade',
+  color: [
+    '#ff0000',
+    '#ff7f00',
+    '#ffff00',
+    '#00ff00',
+    '#0000ff',
+    '#4b0082',
+    '#9400d3',
+  ],
+})
+```
+
+## With Background
+
+```typescript
+const boxed = new ASCIIFontRenderable(renderer, {
+  text: 'BOXED',
+  font: 'block',
+  color: '#ffffff',
+  backgroundColor: RGBA.fromInts(0, 0, 40, 255),
+})
+```
+
+## Text Selection
+
+```typescript
+const selectable = new ASCIIFontRenderable(renderer, {
+  text: 'SELECT ME',
+  font: 'slick',
+  color: '#00d4aa',
+  selectable: true,
+  selectionBg: '#4a5568',
+  selectionFg: '#ffffff',
+})
+
+renderer.on('selection', (selection) => {
+  const selectedText = selectable.getSelectedText()
+  console.log('Selected:', selectedText)
+})
+```
+
+## Dynamic Text Updates
+
+```typescript
+const dynamic = new ASCIIFontRenderable(renderer, {
+  text: '0',
+  font: 'huge',
+  color: '#ff6b6b',
+})
+
+let counter = 0
+setInterval(() => {
+  counter++
+  dynamic.text = counter.toString()
+}, 1000)
+```
+
+## React Usage
+
+```tsx
+import { useState } from 'react'
+import type { ASCIIFontName } from '@opentui/core'
+
+export const Logo = () => {
+  const [font, setFont] = useState<ASCIIFontName>('block')
+
+  return (
+    <box style={{ padding: 1 }}>
+      <ascii-font
+        text="OpenTUI"
+        font={font}
+        color="#00ff00"
+      />
+    </box>
+  )
+}
+```
+
+## Props
+
+<ParamField path="text" type="string" default="''">
+  The text to render in ASCII art. Automatically resizes the component when changed.
+</ParamField>
+
+<ParamField path="font" type="ASCIIFontName" default="'tiny'">
+  The font style to use. Available fonts:
+  - `'tiny'`: Compact small font
+  - `'block'`: Bold block letters
+  - `'shade'`: Shaded 3D effect
+  - `'slick'`: Clean modern style
+  - `'huge'`: Very large letters
+  - `'grid'`: Grid-based design
+  - `'pallet'`: Palette-style font
+</ParamField>
+
+<ParamField path="color" type="ColorInput | ColorInput[]" default="'#FFFFFF'">
+  Text color. Can be a single color or an array of colors for gradients.
+  
+  ```typescript
+  // Single color
+  color: '#ff0000'
+  
+  // Gradient
+  color: ['#ff0000', '#0000ff']
+  
+  // RGBA object
+  color: RGBA.fromInts(255, 0, 0, 255)
+  ```
+</ParamField>
+
+<ParamField path="backgroundColor" type="ColorInput" default="'transparent'">
+  Background color behind the ASCII art.
+</ParamField>
+
+<ParamField path="selectable" type="boolean" default="true">
+  Whether the text can be selected with mouse drag.
+</ParamField>
+
+<ParamField path="selectionBg" type="ColorInput">
+  Background color for selected text.
+</ParamField>
+
+<ParamField path="selectionFg" type="ColorInput">
+  Foreground color for selected text.
+</ParamField>
+
+## Properties
+
+### text
+
+Get or set the displayed text.
+
+```typescript
+asciiFont.text = 'NEW TEXT'
+const current = asciiFont.text
+```
+
+### font
+
+Get or set the font style.
+
+```typescript
+asciiFont.font = 'shade'
+const currentFont = asciiFont.font
+```
+
+### color
+
+Get or set the text color(s).
+
+```typescript
+asciiFont.color = '#00ff00'
+asciiFont.color = ['#ff0000', '#0000ff']
+```
+
+### backgroundColor
+
+Get or set the background color.
+
+```typescript
+asciiFont.backgroundColor = '#000000'
+```
+
+## Methods
+
+### getSelectedText()
+
+Get the currently selected text.
+
+```typescript
+const selected = asciiFont.getSelectedText()
+console.log('Selected:', selected)
+```
+
+### hasSelection()
+
+Check if there is an active selection.
+
+```typescript
+if (asciiFont.hasSelection()) {
+  console.log('Text is selected')
+}
+```
+
+## Common Patterns
+
+### Application Header
+
+```typescript
+const header = new BoxRenderable(renderer, {
+  width: '100%',
+  border: true,
+  borderStyle: 'double',
+  padding: 1,
+})
+
+const logo = new ASCIIFontRenderable(renderer, {
+  text: 'MyApp',
+  font: 'block',
+  color: ['#ff6b6b', '#4ecdc4'],
+})
+
+header.add(logo)
+```
+
+### Loading Animation
+
+```typescript
+const loadingStates = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+let frameIndex = 0
+
+const loader = new ASCIIFontRenderable(renderer, {
+  text: loadingStates[0],
+  font: 'huge',
+  color: '#00d4aa',
+})
+
+const interval = setInterval(() => {
+  frameIndex = (frameIndex + 1) % loadingStates.length
+  loader.text = loadingStates[frameIndex]
+}, 100)
+```
+
+### Status Display
+
+```typescript
+function createStatusDisplay(status: 'OK' | 'ERROR' | 'WARN') {
+  const colors = {
+    OK: '#00ff00',
+    ERROR: '#ff0000',
+    WARN: '#ffff00',
+  }
+
+  return new ASCIIFontRenderable(renderer, {
+    text: status,
+    font: 'block',
+    color: colors[status],
+  })
+}
+```
+
+### Centered Title
+
+```typescript
+const container = new BoxRenderable(renderer, {
+  width: '100%',
+  height: '100%',
+  justifyContent: 'center',
+  alignItems: 'center',
+})
+
+const title = new ASCIIFontRenderable(renderer, {
+  text: 'Welcome',
+  font: 'shade',
+  color: ['#ff6b6b', '#f9ca24'],
+})
+
+container.add(title)
+```
+
+### Interactive Font Selector
+
+```typescript
+const fonts: ASCIIFontName[] = ['tiny', 'block', 'shade', 'slick', 'huge', 'grid', 'pallet']
+let currentIndex = 0
+
+const display = new ASCIIFontRenderable(renderer, {
+  text: 'Sample',
+  font: fonts[0],
+  color: '#00d4aa',
+})
+
+renderer.keyInput.on('keypress', (key) => {
+  if (key.name === 'space') {
+    currentIndex = (currentIndex + 1) % fonts.length
+    display.font = fonts[currentIndex]
+  }
+})
+```
+
+## Font Characteristics
+
+### Size Comparison
+
+- **tiny**: ~3 lines tall, compact
+- **block**: ~5-6 lines tall, bold
+- **shade**: ~5-6 lines tall, 3D shaded
+- **slick**: ~5-6 lines tall, modern
+- **huge**: ~8-10 lines tall, very large
+- **grid**: ~6-7 lines tall, grid-based
+- **pallet**: ~6-7 lines tall, palette design
+
+### Best Use Cases
+
+- **tiny**: Space-constrained UIs, compact headers
+- **block**: Bold statements, attention-grabbing titles
+- **shade**: 3D effects, depth perception
+- **slick**: Modern clean interfaces
+- **huge**: Splash screens, prominent displays
+- **grid**: Technical/retro aesthetics
+- **pallet**: Artistic/decorative text
+
+## Performance Notes
+
+- ASCII fonts automatically resize based on text content
+- Font rendering is optimized with character position caching
+- Gradient colors are applied efficiently per character
+- Selection handling accounts for variable-width characters
+
+## Related Components
+
+- [Box](/components/box) - Container for ASCII fonts
+- [Text](/components/text) - Regular text rendering
+- [TextTable](/components/texttable) - Tabular data display

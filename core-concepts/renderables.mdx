@@ -1,0 +1,565 @@
+---
+title: 'Renderables'
+description: 'Building blocks of your UI - hierarchical objects that can be positioned, styled, and nested'
+---
+
+## Overview
+
+Renderables are the fundamental building blocks of OpenTUI interfaces. Each `Renderable` is:
+
+- A visual element (text, box, input field, etc.)
+- Positioned using Yoga flexbox layout
+- Part of a hierarchical tree structure
+- Capable of handling mouse and keyboard events
+- Independently styled and configurable
+
+## Creating Renderables
+
+Renderables are created by instantiating their class with a renderer context:
+
+```typescript
+import { TextRenderable, BoxRenderable } from "@opentui/core"
+
+const text = new TextRenderable(renderer, {
+  id: "greeting",
+  content: "Hello, OpenTUI!",
+  fg: "#00FF00",
+})
+
+const box = new BoxRenderable(renderer, {
+  id: "container",
+  width: 30,
+  height: 10,
+  backgroundColor: "#333366",
+})
+```
+
+<Info>
+Every renderable requires a `RenderContext` (the renderer) as its first argument.
+</Info>
+
+## Renderable Hierarchy
+
+### Parent-Child Relationships
+
+Renderables form a tree structure using `add()` and `remove()`:
+
+```typescript
+const container = new GroupRenderable(renderer, {
+  id: "main-container",
+})
+
+const header = new TextRenderable(renderer, {
+  content: "Header",
+})
+
+const content = new BoxRenderable(renderer, {
+  height: 20,
+})
+
+// Add children
+container.add(header)
+container.add(content)
+
+// Add to root to make visible
+renderer.root.add(container)
+```
+
+### Tree Navigation
+
+```typescript
+// Get children
+const children = container.getChildren()
+const childCount = container.getChildrenCount()
+
+// Find by ID (direct children only)
+const child = container.getRenderable("header")
+
+// Find in entire subtree
+const descendant = container.findDescendantById("nested-element")
+
+// Access parent
+if (child.parent) {
+  console.log("Parent ID:", child.parent.id)
+}
+```
+
+### Insertion & Removal
+
+```typescript
+// Insert before another child
+container.insertBefore(newChild, existingChild)
+
+// Insert at specific index
+container.add(newChild, 0) // Insert at beginning
+
+// Remove by ID
+container.remove("child-id")
+
+// Destroy (removes from parent and cleans up)
+child.destroy()
+
+// Destroy entire subtree
+container.destroyRecursively()
+```
+
+<Warning>
+Once destroyed, a renderable cannot be reused. Create a new instance instead.
+</Warning>
+
+## Positioning & Sizing
+
+### Dimensions
+
+Renderables support fixed, auto, and percentage-based sizing:
+
+```typescript
+const box = new BoxRenderable(renderer, {
+  width: 50,           // Fixed width: 50 cells
+  height: "auto",      // Auto height based on content
+  minWidth: 20,        // Minimum width constraint
+  maxWidth: 100,       // Maximum width constraint
+  minHeight: "10%",    // Percentage of parent
+  maxHeight: "50%",
+})
+
+// Access computed dimensions
+console.log(box.width, box.height) // Actual rendered size
+```
+
+### Position Types
+
+Renderables can be positioned **relatively** (in flexbox flow) or **absolutely**:
+
+```typescript
+// Relative positioning (default) - part of flexbox layout
+const relativeBox = new BoxRenderable(renderer, {
+  position: "relative",
+})
+
+// Absolute positioning - removed from flow
+const absoluteBox = new BoxRenderable(renderer, {
+  position: "absolute",
+  top: 5,
+  left: 10,
+  width: 20,
+  height: 8,
+})
+```
+
+### Edge Offsets
+
+```typescript
+const positioned = new BoxRenderable(renderer, {
+  position: "absolute",
+  top: 0,              // Distance from top
+  right: 0,            // Distance from right
+  bottom: "auto",      // Auto-calculated
+  left: 10,            // Distance from left
+})
+
+// Update positions dynamically
+positioned.top = 5
+positioned.left = 15
+```
+
+### Coordinates
+
+Renderables track both local and absolute positions:
+
+```typescript
+// Absolute screen coordinates
+console.log(renderable.x, renderable.y)
+
+// Translation offsets
+renderable.translateX = 5
+renderable.translateY = 3
+```
+
+## Styling
+
+### Visibility
+
+```typescript
+renderable.visible = false  // Hide (removes from layout)
+renderable.visible = true   // Show
+
+if (renderable.visible) {
+  console.log("Renderable is visible")
+}
+```
+
+### Opacity
+
+```typescript
+renderable.opacity = 0.5  // 50% transparent (0.0 - 1.0)
+```
+
+Opacity affects the renderable and all its children.
+
+### Z-Index
+
+Control rendering order (higher values render on top):
+
+```typescript
+const background = new BoxRenderable(renderer, {
+  zIndex: 0,
+})
+
+const foreground = new BoxRenderable(renderer, {
+  zIndex: 10,
+})
+
+// Update dynamically
+foreground.zIndex = 20
+```
+
+### Overflow
+
+Control how content beyond bounds is handled:
+
+```typescript
+const scrollable = new BoxRenderable(renderer, {
+  overflow: "scroll",  // Enable scrolling
+  // or "hidden" - clip content
+  // or "visible" - show all (default)
+})
+```
+
+## Rendering
+
+### Custom Rendering
+
+Renderables can define custom rendering logic:
+
+```typescript
+class CustomRenderable extends Renderable {
+  protected renderSelf(buffer: OptimizedBuffer, deltaTime: number): void {
+    // Draw custom content
+    buffer.drawText(
+      "Custom content",
+      this.x,
+      this.y,
+      RGBA.fromHex("#FFFFFF")
+    )
+  }
+
+  protected onUpdate(deltaTime: number): void {
+    // Called before rendering each frame
+    // Update internal state here
+  }
+}
+```
+
+### Render Hooks
+
+Add logic before or after rendering:
+
+```typescript
+const box = new BoxRenderable(renderer, {
+  renderBefore(buffer, deltaTime) {
+    // Runs before this renderable renders
+    console.log("About to render")
+  },
+  renderAfter(buffer, deltaTime) {
+    // Runs after this renderable renders
+    console.log("Finished rendering")
+  },
+})
+```
+
+### Buffered Rendering
+
+Enable double-buffering for complex renderables:
+
+```typescript
+const buffered = new BoxRenderable(renderer, {
+  buffered: true,  // Render to offscreen buffer first
+})
+
+// Access the frame buffer
+if (buffered.frameBuffer) {
+  buffered.frameBuffer.drawText(
+    "Buffered text",
+    0, 0,
+    RGBA.fromHex("#FFFFFF")
+  )
+}
+```
+
+<Tip>
+Buffering is useful for renderables with expensive drawing operations that don't change every frame.
+</Tip>
+
+### Live Renderables
+
+Mark renderables that need continuous updates:
+
+```typescript
+const animated = new BoxRenderable(renderer, {
+  live: true,  // Request continuous rendering
+})
+
+// Dynamically toggle
+animated.live = false  // Stop continuous updates
+```
+
+When a renderable is `live: true`, it keeps the render loop active even when nothing changes.
+
+## Events
+
+### Mouse Events
+
+```typescript
+import { MouseEvent } from "@opentui/core"
+
+const interactive = new BoxRenderable(renderer, {
+  onMouseDown(event: MouseEvent) {
+    console.log(`Mouse down at (${event.x}, ${event.y})`)
+    console.log("Button:", event.button)
+
+    // Prevent default behavior
+    event.preventDefault()
+
+    // Stop propagation to parent
+    event.stopPropagation()
+  },
+
+  onMouseUp(event: MouseEvent) {
+    console.log("Mouse released")
+  },
+
+  onMouseMove(event: MouseEvent) {
+    // Track mouse movement
+  },
+
+  onMouseDrag(event: MouseEvent) {
+    // Track dragging
+  },
+
+  onMouseScroll(event: MouseEvent) {
+    if (event.scroll?.direction === "up") {
+      console.log("Scrolled up")
+    }
+  },
+
+  onMouseOver(event: MouseEvent) {
+    console.log("Mouse entered")
+  },
+
+  onMouseOut(event: MouseEvent) {
+    console.log("Mouse left")
+  },
+})
+```
+
+### Focus Events
+
+Focusable renderables receive keyboard input:
+
+```typescript
+const input = new InputRenderable(renderer, {
+  focusable: true,
+
+  onKeyDown(key: KeyEvent) {
+    console.log("Key pressed:", key.name)
+
+    if (key.name === "enter") {
+      // Handle enter key
+      key.preventDefault()
+    }
+  },
+})
+
+// Listen for focus changes
+input.on("focused", () => {
+  console.log("Input gained focus")
+})
+
+input.on("blurred", () => {
+  console.log("Input lost focus")
+})
+
+// Programmatic focus
+input.focus()
+input.blur()
+
+// Check focus state
+if (input.focused) {
+  console.log("Input is focused")
+}
+```
+
+### Layout Events
+
+```typescript
+renderable.on("resize", () => {
+  console.log(`Resized to ${renderable.width}x${renderable.height}`)
+})
+
+renderable.on("layout-changed", () => {
+  console.log("Layout recalculated")
+})
+```
+
+### Size Change Callback
+
+```typescript
+const box = new BoxRenderable(renderer, {
+  onSizeChange() {
+    console.log("Size changed!")
+  },
+})
+```
+
+## Lifecycle
+
+### Update Cycle
+
+Each frame, renderables go through:
+
+1. **onUpdate(deltaTime)** - Update state
+2. **updateFromLayout()** - Apply layout calculations
+3. **renderSelf(buffer, deltaTime)** - Draw to buffer
+
+### Lifecycle Pass
+
+Register a renderable for lifecycle callbacks:
+
+```typescript
+class MyRenderable extends Renderable {
+  constructor(ctx: RenderContext, options: RenderableOptions) {
+    super(ctx, options)
+
+    // Register for lifecycle pass
+    this.onLifecyclePass = () => {
+      // Called once per frame before layout
+      this.updateState()
+    }
+  }
+}
+```
+
+### Cleanup
+
+```typescript
+class MyRenderable extends Renderable {
+  private timer: Timer
+
+  constructor(ctx: RenderContext, options: RenderableOptions) {
+    super(ctx, options)
+    this.timer = setInterval(() => {}, 1000)
+  }
+
+  protected destroySelf(): void {
+    // Clean up resources
+    clearInterval(this.timer)
+  }
+
+  protected onRemove(): void {
+    // Called when removed from parent (before destruction)
+    console.log("Removed from parent")
+  }
+}
+```
+
+## Selection
+
+Renderables can support text selection:
+
+```typescript
+const selectable = new TextRenderable(renderer, {
+  content: "Selectable text",
+  selectable: true,
+})
+
+// Check for selection
+if (selectable.hasSelection()) {
+  const text = selectable.getSelectedText()
+  console.log("Selected:", text)
+}
+```
+
+## Properties Reference
+
+### Core Properties
+
+```typescript
+renderable.id: string                   // Unique identifier
+renderable.num: number                  // Internal numeric ID
+renderable.ctx: RenderContext          // Renderer context
+renderable.parent: Renderable | null   // Parent renderable
+renderable.isDestroyed: boolean        // Destruction state
+```
+
+### Dimensions & Position
+
+```typescript
+renderable.x: number                   // Absolute X coordinate
+renderable.y: number                   // Absolute Y coordinate
+renderable.width: number               // Computed width
+renderable.height: number              // Computed height
+renderable.translateX: number          // Translation offset X
+renderable.translateY: number          // Translation offset Y
+renderable.top: number | "auto" | `${number}%`
+renderable.right: number | "auto" | `${number}%`
+renderable.bottom: number | "auto" | `${number}%`
+renderable.left: number | "auto" | `${number}%`
+```
+
+### Style Properties
+
+```typescript
+renderable.visible: boolean            // Visibility
+renderable.opacity: number             // Opacity (0.0 - 1.0)
+renderable.zIndex: number              // Rendering order
+renderable.overflow: "visible" | "hidden" | "scroll"
+renderable.position: "relative" | "absolute"
+```
+
+### State Properties
+
+```typescript
+renderable.focusable: boolean          // Can receive focus
+renderable.focused: boolean            // Currently focused
+renderable.selectable: boolean         // Supports selection
+renderable.live: boolean               // Continuous updates
+renderable.liveCount: number           // Live descendant count
+renderable.isDirty: boolean            // Needs re-render
+```
+
+## Methods Reference
+
+### Tree Management
+
+```typescript
+add(obj: Renderable, index?: number): number
+insertBefore(obj: Renderable, anchor: Renderable): number
+remove(id: string): void
+getChildren(): Renderable[]
+getChildrenCount(): number
+getRenderable(id: string): Renderable | undefined
+findDescendantById(id: string): Renderable | undefined
+```
+
+### Rendering
+
+```typescript
+requestRender(): void
+render(buffer: OptimizedBuffer, deltaTime: number): void
+markDirty(): void
+```
+
+### Focus
+
+```typescript
+focus(): void
+blur(): void
+```
+
+### Lifecycle
+
+```typescript
+destroy(): void
+destroyRecursively(): void
+```

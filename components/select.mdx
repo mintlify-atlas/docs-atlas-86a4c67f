@@ -1,0 +1,425 @@
+---
+title: Select
+description: A dropdown selection component with keyboard navigation and visual customization
+---
+
+## Overview
+
+The `SelectRenderable` component provides a scrollable list of options with keyboard navigation, mouse support, and extensive visual customization. It supports both text-based and ASCII font rendering.
+
+## Basic Usage
+
+```typescript
+import { Screen, SelectRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const select = new SelectRenderable(ctx, {
+  x: 5,
+  y: 5,
+  width: 40,
+  height: 10,
+  options: [
+    { name: "Option 1", description: "First option" },
+    { name: "Option 2", description: "Second option" },
+    { name: "Option 3", description: "Third option" },
+  ],
+})
+
+select.on("itemSelected", (index, option) => {
+  console.log("Selected:", option.name)
+})
+
+screen.append(select)
+select.focus()
+```
+
+## Props
+
+<ParamField path="options" type="SelectOption[]" default="[]">
+  Array of options to display. Each option has `name`, `description`, and optional `value`.
+</ParamField>
+
+<ParamField path="selectedIndex" type="number" default="0">
+  Initially selected option index
+</ParamField>
+
+<ParamField path="backgroundColor" type="ColorInput" default="'transparent'">
+  Background color when unfocused
+</ParamField>
+
+<ParamField path="textColor" type="ColorInput" default="'#FFFFFF'">
+  Text color for unselected items
+</ParamField>
+
+<ParamField path="focusedBackgroundColor" type="ColorInput" default="'#1a1a1a'">
+  Background color when focused
+</ParamField>
+
+<ParamField path="focusedTextColor" type="ColorInput" default="'#FFFFFF'">
+  Text color when focused
+</ParamField>
+
+<ParamField path="selectedBackgroundColor" type="ColorInput" default="'#334455'">
+  Background color of selected item
+</ParamField>
+
+<ParamField path="selectedTextColor" type="ColorInput" default="'#FFFF00'">
+  Text color of selected item
+</ParamField>
+
+<ParamField path="descriptionColor" type="ColorInput" default="'#888888'">
+  Color for item descriptions
+</ParamField>
+
+<ParamField path="selectedDescriptionColor" type="ColorInput" default="'#CCCCCC'">
+  Color for selected item description
+</ParamField>
+
+<ParamField path="showScrollIndicator" type="boolean" default="false">
+  Show scroll position indicator on the right edge
+</ParamField>
+
+<ParamField path="wrapSelection" type="boolean" default="false">
+  Whether to wrap selection from last to first item (and vice versa)
+</ParamField>
+
+<ParamField path="showDescription" type="boolean" default="true">
+  Whether to show option descriptions
+</ParamField>
+
+<ParamField path="font" type="keyof typeof fonts">
+  ASCII font to use for rendering option names (e.g., "block", "standard")
+</ParamField>
+
+<ParamField path="itemSpacing" type="number" default="0">
+  Vertical spacing between items in rows
+</ParamField>
+
+<ParamField path="fastScrollStep" type="number" default="5">
+  Number of items to skip when fast scrolling (Shift+Up/Down)
+</ParamField>
+
+<ParamField path="keyBindings" type="SelectKeyBinding[]">
+  Custom key bindings
+</ParamField>
+
+<ParamField path="keyAliasMap" type="KeyAliasMap">
+  Custom key aliases
+</ParamField>
+
+## Types
+
+### SelectOption
+
+```typescript
+interface SelectOption {
+  name: string // Display name
+  description: string // Description text
+  value?: any // Optional associated value
+}
+```
+
+## Events
+
+### selectionChanged
+
+Fired when the selected item changes (via keyboard or programmatically).
+
+```typescript
+select.on("selectionChanged", (index: number, option: SelectOption) => {
+  console.log(`Selection changed to: ${option.name} (index ${index})`)
+})
+```
+
+### itemSelected
+
+Fired when the user presses Enter on an item.
+
+```typescript
+select.on("itemSelected", (index: number, option: SelectOption) => {
+  console.log(`User selected: ${option.name}`)
+})
+```
+
+## Methods
+
+### options
+
+Get or set the list of options.
+
+```typescript
+// Get options
+const currentOptions = select.options
+
+// Set options
+select.options = [
+  { name: "New Option 1", description: "First" },
+  { name: "New Option 2", description: "Second" },
+]
+```
+
+### getSelectedOption()
+
+Returns the currently selected option or null.
+
+```typescript
+const selected = select.getSelectedOption()
+if (selected) {
+  console.log(selected.name, selected.value)
+}
+```
+
+### getSelectedIndex()
+
+Returns the index of the currently selected option.
+
+```typescript
+const index = select.getSelectedIndex()
+```
+
+### setSelectedIndex()
+
+Programmatically select an option by index.
+
+```typescript
+select.setSelectedIndex(2) // Select third option
+```
+
+### moveUp() / moveDown()
+
+Move selection up or down by a specified number of steps.
+
+```typescript
+select.moveUp(1) // Move up one item
+select.moveDown(3) // Move down three items
+```
+
+### selectCurrent()
+
+Trigger selection of the current item (fires `itemSelected` event).
+
+```typescript
+select.selectCurrent()
+```
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `↑` / `k` | Move selection up |
+| `↓` / `j` | Move selection down |
+| `Shift+↑` | Fast scroll up (5 items by default) |
+| `Shift+↓` | Fast scroll down (5 items by default) |
+| `Enter` | Select current item |
+
+## Examples
+
+### Simple Menu
+
+```typescript
+import { Screen, SelectRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const menu = new SelectRenderable(ctx, {
+  x: 10,
+  y: 5,
+  width: 30,
+  height: 8,
+  options: [
+    { name: "New File", description: "Create a new file" },
+    { name: "Open File", description: "Open an existing file" },
+    { name: "Save", description: "Save current file" },
+    { name: "Exit", description: "Exit the application" },
+  ],
+  focusedBackgroundColor: "#2a2a2a",
+  selectedBackgroundColor: "#0066cc",
+  selectedTextColor: "#FFFFFF",
+})
+
+menu.on("itemSelected", (index, option) => {
+  console.log(`Menu action: ${option.name}`)
+})
+
+screen.append(menu)
+menu.focus()
+```
+
+### Dynamic Options
+
+```typescript
+import { Screen, SelectRenderable, TextRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const select = new SelectRenderable(ctx, {
+  x: 5,
+  y: 5,
+  width: 40,
+  height: 10,
+  options: [],
+})
+
+// Load options asynchronously
+async function loadOptions() {
+  const data = await fetch("https://api.example.com/items")
+  const items = await data.json()
+  
+  select.options = items.map((item: any) => ({
+    name: item.title,
+    description: item.subtitle,
+    value: item.id,
+  }))
+}
+
+loadOptions()
+screen.append(select)
+```
+
+### With ASCII Font
+
+```typescript
+import { Screen, SelectRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const select = new SelectRenderable(ctx, {
+  x: 5,
+  y: 5,
+  width: 60,
+  height: 20,
+  font: "block", // Use ASCII block font
+  options: [
+    { name: "RETRO", description: "Retro gaming style" },
+    { name: "MODERN", description: "Modern clean design" },
+    { name: "CLASSIC", description: "Classic terminal look" },
+  ],
+  itemSpacing: 1,
+})
+
+screen.append(select)
+select.focus()
+```
+
+### With Scroll Indicator
+
+```typescript
+import { Screen, SelectRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const longList = Array.from({ length: 50 }, (_, i) => ({
+  name: `Item ${i + 1}`,
+  description: `Description for item ${i + 1}`,
+  value: i,
+}))
+
+const select = new SelectRenderable(ctx, {
+  x: 5,
+  y: 5,
+  width: 40,
+  height: 10,
+  options: longList,
+  showScrollIndicator: true,
+  wrapSelection: true,
+})
+
+screen.append(select)
+select.focus()
+```
+
+### File Picker
+
+```typescript
+import { Screen, SelectRenderable, TextRenderable } from "@opentui/core"
+import { readdirSync, statSync } from "fs"
+import { join } from "path"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const title = new TextRenderable(ctx, {
+  x: 5,
+  y: 3,
+  text: "Select a file:",
+  textColor: "#FFFF00",
+})
+
+function getFiles(dir: string): SelectOption[] {
+  const files = readdirSync(dir)
+  return files.map(file => {
+    const fullPath = join(dir, file)
+    const stats = statSync(fullPath)
+    return {
+      name: file,
+      description: stats.isDirectory() ? "<DIR>" : `${stats.size} bytes`,
+      value: fullPath,
+    }
+  })
+}
+
+const filePicker = new SelectRenderable(ctx, {
+  x: 5,
+  y: 4,
+  width: 60,
+  height: 15,
+  options: getFiles("."),
+  showScrollIndicator: true,
+})
+
+filePicker.on("itemSelected", (index, option) => {
+  console.log(`Selected file: ${option.value}`)
+})
+
+screen.append(title, filePicker)
+filePicker.focus()
+```
+
+### Settings Menu
+
+```typescript
+import { Screen, SelectRenderable, TextRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const settings = {
+  theme: "dark",
+  language: "en",
+  notifications: true,
+}
+
+const settingsMenu = new SelectRenderable(ctx, {
+  x: 10,
+  y: 5,
+  width: 50,
+  height: 12,
+  options: [
+    { name: "Theme", description: `Current: ${settings.theme}`, value: "theme" },
+    { name: "Language", description: `Current: ${settings.language}`, value: "language" },
+    { name: "Notifications", description: `Current: ${settings.notifications ? "On" : "Off"}`, value: "notifications" },
+    { name: "About", description: "App information", value: "about" },
+  ],
+  focusedBackgroundColor: "#1a1a1a",
+  selectedBackgroundColor: "#2a4a6a",
+})
+
+settingsMenu.on("itemSelected", (index, option) => {
+  console.log(`Opening ${option.value} settings`)
+})
+
+screen.append(settingsMenu)
+settingsMenu.focus()
+```
+
+## Related Components
+
+- [TabSelect](/components/tabselect) - Horizontal tab navigation
+- [Input](/components/input) - Single-line text input
+- [Slider](/components/slider) - Numeric range input

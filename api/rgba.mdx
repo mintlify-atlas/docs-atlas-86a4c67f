@@ -1,0 +1,347 @@
+---
+title: RGBA Color API
+description: Color representation and utilities for terminal rendering
+---
+
+## RGBA Class
+
+The `RGBA` class represents colors as normalized RGBA values (0.0 to 1.0). It uses a `Float32Array` internally for efficient FFI interop with the native rendering layer.
+
+### Constructor
+
+<ParamField path="new RGBA" type="constructor">
+  Create an RGBA color from a Float32Array buffer
+
+  ```typescript
+  constructor(buffer: Float32Array)
+  ```
+
+  <ParamField path="buffer" type="Float32Array" required>
+    4-element array containing `[r, g, b, a]` values (0.0 to 1.0)
+  </ParamField>
+
+  <Note>
+  In most cases, use the static factory methods instead of calling the constructor directly.
+  </Note>
+</ParamField>
+
+### Factory Methods
+
+<ParamField path="RGBA.fromValues" type="function">
+  Create from normalized RGBA values
+
+  ```typescript
+  static fromValues(r: number, g: number, b: number, a?: number): RGBA
+  ```
+
+  <ParamField path="r" type="number" required>
+    Red component (0.0 to 1.0)
+  </ParamField>
+
+  <ParamField path="g" type="number" required>
+    Green component (0.0 to 1.0)
+  </ParamField>
+
+  <ParamField path="b" type="number" required>
+    Blue component (0.0 to 1.0)
+  </ParamField>
+
+  <ParamField path="a" type="number">
+    Alpha component (0.0 to 1.0). Default: `1.0`
+  </ParamField>
+</ParamField>
+
+<ParamField path="RGBA.fromInts" type="function">
+  Create from integer RGBA values (0-255)
+
+  ```typescript
+  static fromInts(r: number, g: number, b: number, a?: number): RGBA
+  ```
+
+  <ParamField path="r" type="number" required>
+    Red component (0 to 255)
+  </ParamField>
+
+  <ParamField path="g" type="number" required>
+    Green component (0 to 255)
+  </ParamField>
+
+  <ParamField path="b" type="number" required>
+    Blue component (0 to 255)
+  </ParamField>
+
+  <ParamField path="a" type="number">
+    Alpha component (0 to 255). Default: `255`
+  </ParamField>
+</ParamField>
+
+<ParamField path="RGBA.fromHex" type="function">
+  Create from a hex color string
+
+  ```typescript
+  static fromHex(hex: string): RGBA
+  ```
+
+  <ParamField path="hex" type="string" required>
+    Hex color: `"#RGB"`, `"#RRGGBB"`, `"#RGBA"`, or `"#RRGGBBAA"` (with or without `#`)
+  </ParamField>
+
+  Returns magenta (`#FF00FF`) if the hex string is invalid.
+</ParamField>
+
+<ParamField path="RGBA.fromArray" type="function">
+  Create from an existing Float32Array
+
+  ```typescript
+  static fromArray(array: Float32Array): RGBA
+  ```
+</ParamField>
+
+### Properties
+
+<ParamField path="r" type="number">
+  Red component (0.0 to 1.0)
+</ParamField>
+
+<ParamField path="g" type="number">
+  Green component (0.0 to 1.0)
+</ParamField>
+
+<ParamField path="b" type="number">
+  Blue component (0.0 to 1.0)
+</ParamField>
+
+<ParamField path="a" type="number">
+  Alpha component (0.0 to 1.0)
+</ParamField>
+
+<ParamField path="buffer" type="Float32Array">
+  Underlying storage buffer
+</ParamField>
+
+### Methods
+
+<ParamField path="toInts" type="function">
+  Convert to integer RGBA values
+
+  ```typescript
+  toInts(): [number, number, number, number]
+  ```
+
+  Returns an array of integers (0-255).
+</ParamField>
+
+<ParamField path="toString" type="function">
+  Convert to string representation
+
+  ```typescript
+  toString(): string
+  ```
+
+  Returns a string like `"rgba(0.50, 0.75, 1.00, 1.00)"`.
+</ParamField>
+
+<ParamField path="equals" type="function">
+  Check equality with another color
+
+  ```typescript
+  equals(other?: RGBA): boolean
+  ```
+
+  Returns `true` if all components are equal.
+</ParamField>
+
+<ParamField path="map" type="function">
+  Map a function over all components
+
+  ```typescript
+  map<R>(fn: (value: number) => R): [R, R, R, R]
+  ```
+
+  Example:
+  ```typescript
+  const color = RGBA.fromValues(0.5, 0.5, 0.5, 1.0)
+  const doubled = color.map(x => x * 2)  // [1.0, 1.0, 1.0, 2.0]
+  ```
+</ParamField>
+
+## Color Utilities
+
+### Hex Conversion
+
+<ParamField path="hexToRgb" type="function">
+  Convert hex string to RGBA
+
+  ```typescript
+  function hexToRgb(hex: string): RGBA
+  ```
+
+  Supports 3, 4, 6, and 8 character hex codes (with or without `#`).
+</ParamField>
+
+<ParamField path="rgbToHex" type="function">
+  Convert RGBA to hex string
+
+  ```typescript
+  function rgbToHex(rgb: RGBA): string
+  ```
+
+  Returns 6-character hex for opaque colors, 8-character for transparent.
+</ParamField>
+
+### Color Space Conversion
+
+<ParamField path="hsvToRgb" type="function">
+  Convert HSV to RGB
+
+  ```typescript
+  function hsvToRgb(h: number, s: number, v: number): RGBA
+  ```
+
+  <ParamField path="h" type="number" required>
+    Hue (0 to 360)
+  </ParamField>
+
+  <ParamField path="s" type="number" required>
+    Saturation (0.0 to 1.0)
+  </ParamField>
+
+  <ParamField path="v" type="number" required>
+    Value/Brightness (0.0 to 1.0)
+  </ParamField>
+
+  Always returns opaque color (alpha = 1.0).
+</ParamField>
+
+### Color Parsing
+
+<ParamField path="parseColor" type="function">
+  Parse a color from string or RGBA object
+
+  ```typescript
+  function parseColor(color: ColorInput): RGBA
+  ```
+
+  <ParamField path="color" type="string | RGBA" required>
+    Color to parse
+  </ParamField>
+
+  Supports:
+  - Hex colors: `"#FF0000"`, `"#F00"`, etc.
+  - CSS color names: `"red"`, `"blue"`, `"transparent"`, etc.
+  - Existing `RGBA` objects (returned as-is)
+</ParamField>
+
+## CSS Color Names
+
+Supported color names:
+
+- **Basic**: `black`, `white`, `red`, `green`, `blue`, `yellow`, `cyan`, `magenta`
+- **Extended**: `gray`/`grey`, `silver`, `maroon`, `olive`, `lime`, `aqua`, `teal`, `navy`, `fuchsia`, `purple`, `orange`
+- **Bright**: `brightblack`, `brightred`, `brightgreen`, `brightblue`, `brightyellow`, `brightcyan`, `brightmagenta`, `brightwhite`
+- **Special**: `transparent` (returns `rgba(0, 0, 0, 0)`)
+
+## Examples
+
+### Creating Colors
+
+```typescript
+import { RGBA } from "@opentui/core"
+
+// From normalized values (0.0 to 1.0)
+const red = RGBA.fromValues(1.0, 0.0, 0.0, 1.0)
+
+// From integers (0 to 255)
+const green = RGBA.fromInts(0, 255, 0)
+
+// From hex
+const blue = RGBA.fromHex("#0000FF")
+const blueShort = RGBA.fromHex("#00F")
+const semiTransparent = RGBA.fromHex("#FF000080")
+
+// Transparent
+const transparent = RGBA.fromValues(0, 0, 0, 0)
+```
+
+### Using parseColor
+
+```typescript
+import { parseColor } from "@opentui/core"
+
+const color1 = parseColor("red")           // CSS name
+const color2 = parseColor("#FF0000")       // Hex
+const color3 = parseColor("transparent")   // Special
+const color4 = parseColor(RGBA.fromInts(255, 0, 0))  // Pass-through
+```
+
+### Color Manipulation
+
+```typescript
+const color = RGBA.fromHex("#FF8800")
+
+// Access components
+console.log(color.r, color.g, color.b, color.a)
+
+// Modify components
+color.a = 0.5  // Make semi-transparent
+
+// Convert to integers
+const [r, g, b, a] = color.toInts()  // [255, 136, 0, 128]
+
+// Convert to hex
+import { rgbToHex } from "@opentui/core"
+const hex = rgbToHex(color)  // "#ff880080"
+
+// Compare colors
+const other = RGBA.fromHex("#FF8800")
+console.log(color.equals(other))  // false (different alpha)
+```
+
+### HSV Color Generation
+
+```typescript
+import { hsvToRgb } from "@opentui/core"
+
+// Create a rainbow
+for (let i = 0; i < 360; i += 30) {
+  const color = hsvToRgb(i, 1.0, 1.0)
+  console.log(`Hue ${i}:`, color.toString())
+}
+```
+
+### Using with FrameBuffer
+
+```typescript
+import { OptimizedBuffer, RGBA } from "@opentui/core"
+
+const buffer = OptimizedBuffer.create(80, 24, "unicode")
+
+// Use colors in rendering
+const fg = RGBA.fromHex("#00FF00")
+const bg = RGBA.fromValues(0.1, 0.1, 0.1, 1.0)
+
+buffer.drawText("Hello", 0, 0, fg, bg)
+
+// Semi-transparent overlay
+const overlay = RGBA.fromValues(1, 0, 0, 0.3)
+buffer.fillRect(10, 5, 20, 10, overlay)
+```
+
+## Type Definitions
+
+```typescript
+type ColorInput = string | RGBA
+
+interface RGBA {
+  r: number
+  g: number
+  b: number
+  a: number
+  buffer: Float32Array
+  
+  toInts(): [number, number, number, number]
+  toString(): string
+  equals(other?: RGBA): boolean
+  map<R>(fn: (value: number) => R): [R, R, R, R]
+}
+```

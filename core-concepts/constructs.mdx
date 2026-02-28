@@ -1,0 +1,523 @@
+---
+title: 'Constructs'
+description: 'Declarative component composition - the React-like way to build OpenTUI interfaces'
+---
+
+## Overview
+
+**Constructs** are OpenTUI's declarative component system. They look like React or Solid components but work differently:
+
+- **Not render functions** - They're constructors that create renderables
+- **No re-rendering** - They build the tree once
+- **Composable** - Create complex UIs from simple pieces
+- **Type-safe** - Full TypeScript support with proper inference
+
+Constructs provide a cleaner, more maintainable way to build UIs compared to imperative renderable creation.
+
+## Constructs vs Renderables
+
+There are two ways to create UI elements in OpenTUI:
+
+### Imperative (Renderables)
+
+```typescript
+import { BoxRenderable, TextRenderable, InputRenderable } from "@opentui/core"
+
+const loginForm = new BoxRenderable(renderer, {
+  id: "login-form",
+  width: 20,
+  height: 10,
+  padding: 1,
+})
+
+const usernameLabel = new TextRenderable(renderer, {
+  content: "Username:",
+})
+loginForm.add(usernameLabel)
+
+const usernameInput = new InputRenderable(renderer, {
+  id: "username-input",
+  placeholder: "Enter username...",
+  width: 20,
+})
+loginForm.add(usernameInput)
+
+renderer.root.add(loginForm)
+
+// Focusing nested elements is awkward
+usernameInput.focus() // Works only if you kept the reference
+```
+
+### Declarative (Constructs)
+
+```typescript
+import { Box, Text, Input } from "@opentui/core"
+
+const loginForm = Box(
+  { width: 20, height: 10, padding: 1 },
+  Text({ content: "Username:" }),
+  Input({
+    id: "username-input",
+    placeholder: "Enter username...",
+    width: 20,
+  })
+)
+
+renderer.root.add(loginForm)
+```
+
+Cleaner, more readable, and easier to compose!
+
+## Creating Constructs
+
+### Built-in Constructs
+
+OpenTUI provides construct functions for all built-in renderables:
+
+```typescript
+import {
+  Box,
+  Text,
+  Input,
+  Select,
+  TabSelect,
+  Group,
+  FrameBuffer as FB,
+} from "@opentui/core"
+
+const ui = Box(
+  { flexDirection: "column", gap: 1 },
+  Text({ content: "Welcome!" }),
+  Input({ placeholder: "Enter text..." }),
+  Select({
+    options: [
+      { name: "Option 1" },
+      { name: "Option 2" },
+    ],
+  })
+)
+```
+
+### Custom Constructs
+
+Create reusable components with functional constructs:
+
+```typescript
+import { Box, Text, Input, type VNode } from "@opentui/core"
+
+interface LabeledInputProps {
+  id: string
+  label: string
+  placeholder: string
+}
+
+function LabeledInput(props: LabeledInputProps): VNode {
+  return Box(
+    { flexDirection: "row" },
+    Text({ content: props.label + " " }),
+    Input({
+      id: `${props.id}-input`,
+      placeholder: props.placeholder,
+      width: 20,
+    })
+  )
+}
+
+// Use it
+const username = LabeledInput({
+  id: "username",
+  label: "Username:",
+  placeholder: "Enter your username...",
+})
+```
+
+<Tip>
+Functional constructs are just functions that return VNodes. They're called once during tree construction.
+</Tip>
+
+## The VNode System
+
+### What is a VNode?
+
+A **VNode** (Virtual Node) is a lightweight description of a renderable:
+
+```typescript
+interface VNode<P = any, C = VChild[]> {
+  type: Construct<P>              // Constructor or function
+  props?: P                       // Properties/options
+  children?: C                    // Child VNodes
+  __delegateMap?: Record<string, string>  // Delegation config
+  __pendingCalls?: PendingCall[]  // Queued method calls
+}
+```
+
+VNodes are created by construct functions and later **instantiated** into actual renderables.
+
+### Instantiation
+
+Convert a VNode to a renderable using `instantiate()`:
+
+```typescript
+import { instantiate } from "@opentui/core"
+
+const vnode = Box(
+  { width: 50 },
+  Text({ content: "Hello" })
+)
+
+// Instantiate into a real renderable
+const renderable = instantiate(renderer, vnode)
+renderer.root.add(renderable)
+```
+
+<Info>
+You rarely need to call `instantiate()` manually - `add()` does it automatically when you pass a VNode.
+</Info>
+
+### The `h()` Function
+
+Under the hood, construct functions use `h()` to create VNodes:
+
+```typescript
+import { h, BoxRenderable } from "@opentui/core"
+
+// These are equivalent:
+const vnode1 = Box({ width: 50 })
+const vnode2 = h(BoxRenderable, { width: 50 })
+```
+
+You can use `h()` directly for more control:
+
+```typescript
+import { h } from "@opentui/core"
+
+function MyComponent(props: { title: string }, children?: VChild[]) {
+  return h(
+    BoxRenderable,
+    { padding: 1 },
+    h(TextRenderable, { content: props.title }),
+    ...children
+  )
+}
+```
+
+## Method Chaining
+
+VNodes support method chaining for renderable methods:
+
+```typescript
+const input = Input({
+  id: "username",
+  placeholder: "Username...",
+}).focus()  // Call focus() when instantiated
+
+renderer.root.add(input)
+// The actual renderable will be focused after instantiation
+```
+
+This works because:
+1. VNodes created from renderables are wrapped in a Proxy
+2. Method calls are captured and stored
+3. When instantiated, stored calls are replayed on the renderable
+
+### Property Assignment
+
+You can also set properties:
+
+```typescript
+const box = Box({ width: 50 })
+box.opacity = 0.5  // Sets opacity when instantiated
+box.visible = false
+```
+
+## Delegation
+
+Delegation lets you route API calls to nested children. This is crucial for composable components.
+
+### The Problem
+
+```typescript
+function LabeledInput(props: { id: string; label: string }) {
+  return Box(
+    { flexDirection: "row" },
+    Text({ content: props.label }),
+    Input({ id: `${props.id}-input`, width: 20 })
+  )
+}
+
+const username = LabeledInput({ id: "username", label: "Username:" })
+renderer.root.add(username)
+
+// How do we focus the input?
+username.focus() // ❌ Tries to focus the Box, not the Input!
+```
+
+### The Solution: `delegate()`
+
+```typescript
+import { delegate } from "@opentui/core"
+
+function LabeledInput(props: { id: string; label: string }) {
+  return delegate(
+    {
+      focus: `${props.id}-input`,  // Route focus() to this child ID
+      blur: `${props.id}-input`,   // Route blur() to this child ID
+    },
+    Box(
+      { flexDirection: "row" },
+      Text({ content: props.label }),
+      Input({ id: `${props.id}-input`, width: 20 })
+    )
+  )
+}
+
+const username = LabeledInput({ id: "username", label: "Username:" })
+renderer.root.add(username)
+
+username.focus() // ✅ Focuses the Input, not the Box!
+```
+
+### How Delegation Works
+
+1. `delegate()` annotates the VNode with a mapping: `{ focus: "username-input" }`
+2. When instantiated, the renderable is wrapped in a Proxy
+3. When `focus()` is called, the proxy:
+   - Finds the descendant with ID `"username-input"`
+   - Calls `focus()` on that descendant instead
+   - Caches the descendant for performance
+
+### Multiple Delegations
+
+```typescript
+function LoginForm(props: {}) {
+  return delegate(
+    {
+      // Delegate multiple APIs to different children
+      focus: "username-input",
+      submit: "submit-button",
+    },
+    Box(
+      { flexDirection: "column" },
+      Input({ id: "username-input" }),
+      Input({ id: "password-input" }),
+      Button({ id: "submit-button", content: "Login" })
+    )
+  )
+}
+
+const form = LoginForm({})
+form.focus()   // Focuses username-input
+form.submit()  // Calls submit() on submit-button
+```
+
+<Warning>
+The delegated child must exist in the tree, or the call will fail silently. Make sure IDs match!
+</Warning>
+
+## Composition Patterns
+
+### Container Components
+
+```typescript
+function Panel(props: { title: string }, children?: VChild[]) {
+  return Box(
+    { border: true, borderStyle: "rounded", padding: 1 },
+    Text({ content: props.title, fg: "#00FFFF" }),
+    Group({ flexDirection: "column" }, ...children)
+  )
+}
+
+// Use it
+const panel = Panel(
+  { title: "Settings" },
+  Text({ content: "Option 1" }),
+  Text({ content: "Option 2" })
+)
+```
+
+### Conditional Rendering
+
+```typescript
+function Greeting(props: { isLoggedIn: boolean; username?: string }) {
+  if (props.isLoggedIn && props.username) {
+    return Text({ content: `Welcome back, ${props.username}!` })
+  }
+  return Text({ content: "Please log in" })
+}
+```
+
+### List Rendering
+
+```typescript
+function TodoList(props: { items: string[] }) {
+  return Box(
+    { flexDirection: "column" },
+    ...props.items.map((item, i) =>
+      Text({ content: `${i + 1}. ${item}` })
+    )
+  )
+}
+
+const todos = TodoList({
+  items: ["Buy milk", "Write docs", "Ship code"],
+})
+```
+
+### Slots Pattern
+
+```typescript
+function Layout(
+  props: {
+    header?: VNode
+    footer?: VNode
+  },
+  children?: VChild[]
+) {
+  return Box(
+    { flexDirection: "column", height: "100%" },
+    props.header,
+    Group({ flexGrow: 1 }, ...children),
+    props.footer
+  )
+}
+
+const app = Layout(
+  {
+    header: Text({ content: "Header" }),
+    footer: Text({ content: "Footer" }),
+  },
+  Text({ content: "Main content" })
+)
+```
+
+## Complete Example
+
+Here's a full login form using constructs:
+
+```typescript
+import { Box, Text, Input, delegate, type VNode } from "@opentui/core"
+
+function LabeledInput(props: {
+  id: string
+  label: string
+  placeholder: string
+}) {
+  return delegate(
+    { focus: `${props.id}-input` },
+    Box(
+      { flexDirection: "row", gap: 1 },
+      Text({ content: props.label }),
+      Input({
+        id: `${props.id}-input`,
+        placeholder: props.placeholder,
+        width: 20,
+      })
+    )
+  )
+}
+
+function Button(props: {
+  id: string
+  content: string
+  onClick: () => void
+}) {
+  return Box(
+    {
+      border: true,
+      padding: 1,
+      onMouseDown: props.onClick,
+    },
+    Text({ content: props.content, selectable: false })
+  )
+}
+
+function LoginForm() {
+  return Box(
+    { flexDirection: "column", gap: 1, padding: 2 },
+    Text({ content: "Login", fg: "#00FFFF" }),
+    LabeledInput({
+      id: "username",
+      label: "Username:",
+      placeholder: "Enter username...",
+    }),
+    LabeledInput({
+      id: "password",
+      label: "Password:",
+      placeholder: "Enter password...",
+    }),
+    Box(
+      { flexDirection: "row", gap: 1 },
+      Button({
+        id: "login",
+        content: "Login",
+        onClick: () => console.log("Login clicked"),
+      }),
+      Button({
+        id: "cancel",
+        content: "Cancel",
+        onClick: () => console.log("Cancel clicked"),
+      })
+    )
+  )
+}
+
+// Use it
+const renderer = await createCliRenderer()
+const form = LoginForm()
+renderer.root.add(form)
+```
+
+## Best Practices
+
+<Tip>
+**Use constructs for composition** - They make complex UIs much easier to build and maintain.
+</Tip>
+
+<Tip>
+**Use delegation for nested APIs** - Essential when you need to access child renderable methods.
+</Tip>
+
+<Tip>
+**Keep props interfaces** - TypeScript will help catch errors at build time.
+</Tip>
+
+<Warning>
+**Don't treat constructs as render functions** - They're called once to build the tree, not on every update.
+</Warning>
+
+<Info>
+**Constructs are synchronous** - Unlike React, there's no reconciliation or diffing. The tree is built once.
+</Info>
+
+## API Reference
+
+### Functions
+
+```typescript
+// Create a VNode from a renderable constructor or functional construct
+h<T>(type: Construct<T>, props?: T, ...children: VChild[]): VNode
+
+// Instantiate a VNode into a renderable
+instantiate(ctx: RenderContext, vnode: VNode): Renderable
+
+// Route API calls to descendant renderables
+delegate(
+  mapping: Record<string, string>,
+  vnode: VNode
+): VNode
+
+// Check if an object is a VNode
+isVNode(obj: any): obj is VNode
+```
+
+### Types
+
+```typescript
+type VChild = VNode | Renderable | VChild[] | null | undefined | false
+
+type FunctionalConstruct<P> = (props: P, children?: VChild[]) => VNode
+
+type Construct<P> =
+  | RenderableConstructor<P>
+  | FunctionalConstruct<P>
+```

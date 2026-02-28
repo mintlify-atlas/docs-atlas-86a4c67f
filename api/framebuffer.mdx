@@ -1,0 +1,553 @@
+---
+title: FrameBuffer API
+description: Low-level framebuffer API for direct rendering to terminal cells
+---
+
+## OptimizedBuffer
+
+The `OptimizedBuffer` class (also known as FrameBuffer) provides low-level access to terminal rendering. It manages a grid of cells, each containing a character, foreground color, background color, and text attributes.
+
+### Creating Buffers
+
+<ParamField path="OptimizedBuffer.create" type="function">
+  Create a new framebuffer
+
+  ```typescript
+  static create(
+    width: number,
+    height: number,
+    widthMethod: WidthMethod,
+    options?: { respectAlpha?: boolean; id?: string }
+  ): OptimizedBuffer
+  ```
+
+  <ParamField path="width" type="number" required>
+    Width in terminal cells
+  </ParamField>
+
+  <ParamField path="height" type="number" required>
+    Height in terminal cells
+  </ParamField>
+
+  <ParamField path="widthMethod" type="'unicode' | 'wcwidth' | 'no_zwj'" required>
+    Character width calculation method
+  </ParamField>
+
+  <ParamField path="options.respectAlpha" type="boolean">
+    Whether to respect alpha channel when compositing. Default: `false`
+  </ParamField>
+
+  <ParamField path="options.id" type="string">
+    Optional identifier for debugging
+  </ParamField>
+</ParamField>
+
+### Properties
+
+<ParamField path="width" type="number" readonly>
+  Buffer width in cells
+</ParamField>
+
+<ParamField path="height" type="number" readonly>
+  Buffer height in cells
+</ParamField>
+
+<ParamField path="widthMethod" type="WidthMethod" readonly>
+  Character width calculation method used by this buffer
+</ParamField>
+
+<ParamField path="respectAlpha" type="boolean">
+  Whether alpha blending is enabled
+</ParamField>
+
+<ParamField path="ptr" type="Pointer" readonly>
+  Native pointer to the underlying buffer (for advanced use)
+</ParamField>
+
+<ParamField path="buffers" type="object" readonly>
+  Direct access to raw buffer data
+
+  ```typescript
+  {
+    char: Uint32Array        // Unicode codepoints
+    fg: Float32Array         // Foreground colors (RGBA, 4 floats per cell)
+    bg: Float32Array         // Background colors (RGBA, 4 floats per cell)
+    attributes: Uint32Array  // Text attributes (bold, italic, etc.)
+  }
+  ```
+</ParamField>
+
+### Drawing Methods
+
+<ParamField path="clear" type="function">
+  Clear the entire buffer with a background color
+
+  ```typescript
+  clear(bg?: RGBA): void
+  ```
+
+  <ParamField path="bg" type="RGBA">
+    Background color. Default: `RGBA.fromValues(0, 0, 0, 1)`
+  </ParamField>
+</ParamField>
+
+<ParamField path="setCell" type="function">
+  Set a single cell with no alpha blending
+
+  ```typescript
+  setCell(
+    x: number,
+    y: number,
+    char: string,
+    fg: RGBA,
+    bg: RGBA,
+    attributes?: number
+  ): void
+  ```
+
+  <ParamField path="x" type="number" required>
+    X coordinate (column)
+  </ParamField>
+
+  <ParamField path="y" type="number" required>
+    Y coordinate (row)
+  </ParamField>
+
+  <ParamField path="char" type="string" required>
+    Character to display (first codepoint used)
+  </ParamField>
+
+  <ParamField path="fg" type="RGBA" required>
+    Foreground color
+  </ParamField>
+
+  <ParamField path="bg" type="RGBA" required>
+    Background color
+  </ParamField>
+
+  <ParamField path="attributes" type="number">
+    Text attributes (bold, italic, underline, etc.). Default: `0`
+  </ParamField>
+</ParamField>
+
+<ParamField path="setCellWithAlphaBlending" type="function">
+  Set a single cell with alpha blending
+
+  ```typescript
+  setCellWithAlphaBlending(
+    x: number,
+    y: number,
+    char: string,
+    fg: RGBA,
+    bg: RGBA,
+    attributes?: number
+  ): void
+  ```
+
+  Same parameters as `setCell`, but blends colors using alpha channel.
+</ParamField>
+
+<ParamField path="drawText" type="function">
+  Draw text at a position with optional selection
+
+  ```typescript
+  drawText(
+    text: string,
+    x: number,
+    y: number,
+    fg: RGBA,
+    bg?: RGBA,
+    attributes?: number,
+    selection?: {
+      start: number
+      end: number
+      bgColor?: RGBA
+      fgColor?: RGBA
+    }
+  ): void
+  ```
+
+  <ParamField path="text" type="string" required>
+    Text to draw
+  </ParamField>
+
+  <ParamField path="x" type="number" required>
+    Starting X coordinate
+  </ParamField>
+
+  <ParamField path="y" type="number" required>
+    Starting Y coordinate
+  </ParamField>
+
+  <ParamField path="fg" type="RGBA" required>
+    Foreground color
+  </ParamField>
+
+  <ParamField path="bg" type="RGBA">
+    Background color
+  </ParamField>
+
+  <ParamField path="attributes" type="number">
+    Text attributes. Default: `0`
+  </ParamField>
+
+  <ParamField path="selection" type="object">
+    Optional selection range to highlight
+  </ParamField>
+</ParamField>
+
+<ParamField path="drawChar" type="function">
+  Draw a single character by codepoint
+
+  ```typescript
+  drawChar(
+    char: number,
+    x: number,
+    y: number,
+    fg: RGBA,
+    bg: RGBA,
+    attributes?: number
+  ): void
+  ```
+
+  <ParamField path="char" type="number" required>
+    Unicode codepoint
+  </ParamField>
+</ParamField>
+
+<ParamField path="fillRect" type="function">
+  Fill a rectangular area with a background color
+
+  ```typescript
+  fillRect(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    bg: RGBA
+  ): void
+  ```
+</ParamField>
+
+<ParamField path="drawBox" type="function">
+  Draw a bordered box with optional title
+
+  ```typescript
+  drawBox(options: {
+    x: number
+    y: number
+    width: number
+    height: number
+    borderStyle?: BorderStyle
+    customBorderChars?: Uint32Array
+    border: boolean | BorderSides[]
+    borderColor: RGBA
+    backgroundColor: RGBA
+    shouldFill?: boolean
+    title?: string
+    titleAlignment?: "left" | "center" | "right"
+  }): void
+  ```
+
+  <ParamField path="borderStyle" type="'single' | 'double' | 'rounded' | 'thick' | 'dashed'">
+    Border style preset
+  </ParamField>
+
+  <ParamField path="border" type="boolean | BorderSides[]" required>
+    Which sides to draw: `true` for all sides, or array like `["top", "left"]`
+  </ParamField>
+
+  <ParamField path="titleAlignment" type="'left' | 'center' | 'right'">
+    Title text alignment. Default: `"left"`
+  </ParamField>
+</ParamField>
+
+<ParamField path="drawGrid" type="function">
+  Draw a grid with custom column/row offsets
+
+  ```typescript
+  drawGrid(options: {
+    borderChars: Uint32Array
+    borderFg: RGBA
+    borderBg: RGBA
+    columnOffsets: Int32Array
+    rowOffsets: Int32Array
+    drawInner: boolean
+    drawOuter: boolean
+  }): void
+  ```
+</ParamField>
+
+### Compositing
+
+<ParamField path="drawFrameBuffer" type="function">
+  Composite another framebuffer onto this one
+
+  ```typescript
+  drawFrameBuffer(
+    destX: number,
+    destY: number,
+    frameBuffer: OptimizedBuffer,
+    sourceX?: number,
+    sourceY?: number,
+    sourceWidth?: number,
+    sourceHeight?: number
+  ): void
+  ```
+
+  <ParamField path="destX" type="number" required>
+    Destination X coordinate
+  </ParamField>
+
+  <ParamField path="destY" type="number" required>
+    Destination Y coordinate
+  </ParamField>
+
+  <ParamField path="frameBuffer" type="OptimizedBuffer" required>
+    Source buffer to composite
+  </ParamField>
+
+  <ParamField path="sourceX" type="number">
+    Source region X offset
+  </ParamField>
+
+  <ParamField path="sourceY" type="number">
+    Source region Y offset
+  </ParamField>
+
+  <ParamField path="sourceWidth" type="number">
+    Source region width
+  </ParamField>
+
+  <ParamField path="sourceHeight" type="number">
+    Source region height
+  </ParamField>
+</ParamField>
+
+<ParamField path="drawTextBuffer" type="function">
+  Draw a TextBufferView
+
+  ```typescript
+  drawTextBuffer(textBufferView: TextBufferView, x: number, y: number): void
+  ```
+</ParamField>
+
+<ParamField path="drawEditorView" type="function">
+  Draw an EditorView
+
+  ```typescript
+  drawEditorView(editorView: EditorView, x: number, y: number): void
+  ```
+</ParamField>
+
+### Image Rendering
+
+<ParamField path="drawSuperSampleBuffer" type="function">
+  Draw pixel data with supersampling
+
+  ```typescript
+  drawSuperSampleBuffer(
+    x: number,
+    y: number,
+    pixelDataPtr: Pointer,
+    pixelDataLength: number,
+    format: "bgra8unorm" | "rgba8unorm",
+    alignedBytesPerRow: number
+  ): void
+  ```
+</ParamField>
+
+<ParamField path="drawGrayscaleBuffer" type="function">
+  Draw grayscale intensity data
+
+  ```typescript
+  drawGrayscaleBuffer(
+    posX: number,
+    posY: number,
+    intensities: Float32Array,
+    srcWidth: number,
+    srcHeight: number,
+    fg?: RGBA | null,
+    bg?: RGBA | null
+  ): void
+  ```
+</ParamField>
+
+<ParamField path="drawGrayscaleBufferSupersampled" type="function">
+  Draw grayscale data with supersampling for smoother rendering
+
+  ```typescript
+  drawGrayscaleBufferSupersampled(
+    posX: number,
+    posY: number,
+    intensities: Float32Array,
+    srcWidth: number,
+    srcHeight: number,
+    fg?: RGBA | null,
+    bg?: RGBA | null
+  ): void
+  ```
+</ParamField>
+
+### Clipping and Opacity
+
+<ParamField path="pushScissorRect" type="function">
+  Push a clipping rectangle onto the stack
+
+  ```typescript
+  pushScissorRect(x: number, y: number, width: number, height: number): void
+  ```
+</ParamField>
+
+<ParamField path="popScissorRect" type="function">
+  Pop the top clipping rectangle from the stack
+
+  ```typescript
+  popScissorRect(): void
+  ```
+</ParamField>
+
+<ParamField path="clearScissorRects" type="function">
+  Remove all clipping rectangles
+
+  ```typescript
+  clearScissorRects(): void
+  ```
+</ParamField>
+
+<ParamField path="pushOpacity" type="function">
+  Push an opacity value onto the stack (multiplies with existing opacity)
+
+  ```typescript
+  pushOpacity(opacity: number): void
+  ```
+
+  <ParamField path="opacity" type="number" required>
+    Opacity value between 0.0 and 1.0
+  </ParamField>
+</ParamField>
+
+<ParamField path="popOpacity" type="function">
+  Pop the top opacity value from the stack
+
+  ```typescript
+  popOpacity(): void
+  ```
+</ParamField>
+
+<ParamField path="getCurrentOpacity" type="function">
+  Get the current effective opacity
+
+  ```typescript
+  getCurrentOpacity(): number
+  ```
+</ParamField>
+
+<ParamField path="clearOpacity" type="function">
+  Clear the opacity stack
+
+  ```typescript
+  clearOpacity(): void
+  ```
+</ParamField>
+
+### Utilities
+
+<ParamField path="resize" type="function">
+  Resize the buffer (clears content)
+
+  ```typescript
+  resize(width: number, height: number): void
+  ```
+</ParamField>
+
+<ParamField path="setRespectAlpha" type="function">
+  Enable or disable alpha blending
+
+  ```typescript
+  setRespectAlpha(respectAlpha: boolean): void
+  ```
+</ParamField>
+
+<ParamField path="getNativeId" type="function">
+  Get the buffer's native identifier
+
+  ```typescript
+  getNativeId(): string
+  ```
+</ParamField>
+
+<ParamField path="getRealCharBytes" type="function">
+  Get the resolved character data as UTF-8 bytes
+
+  ```typescript
+  getRealCharBytes(addLineBreaks?: boolean): Uint8Array
+  ```
+
+  <ParamField path="addLineBreaks" type="boolean">
+    Whether to add newlines between rows. Default: `false`
+  </ParamField>
+</ParamField>
+
+<ParamField path="getSpanLines" type="function">
+  Extract buffer content as styled text spans
+
+  ```typescript
+  getSpanLines(): CapturedLine[]
+  ```
+
+  Returns an array of lines, each containing spans with text, colors, and attributes.
+</ParamField>
+
+<ParamField path="destroy" type="function">
+  Destroy the buffer and free native resources
+
+  ```typescript
+  destroy(): void
+  ```
+</ParamField>
+
+## Example
+
+```typescript
+import { OptimizedBuffer, RGBA } from "@opentui/core"
+
+// Create a 80x24 buffer
+const buffer = OptimizedBuffer.create(80, 24, "unicode", {
+  respectAlpha: true,
+  id: "main-buffer"
+})
+
+// Clear with dark background
+buffer.clear(RGBA.fromValues(0.1, 0.1, 0.1, 1))
+
+// Draw text
+buffer.drawText(
+  "Hello, World!",
+  5, 10,
+  RGBA.fromHex("#00FF00"),
+  RGBA.fromValues(0, 0, 0, 0)
+)
+
+// Draw a box
+buffer.drawBox({
+  x: 10,
+  y: 5,
+  width: 40,
+  height: 10,
+  border: true,
+  borderStyle: "rounded",
+  borderColor: RGBA.fromHex("#FFFFFF"),
+  backgroundColor: RGBA.fromValues(0.2, 0.2, 0.3, 1),
+  title: "My Box",
+  titleAlignment: "center"
+})
+
+// Use clipping
+buffer.pushScissorRect(0, 0, 40, 12)
+buffer.drawText("Clipped text", 0, 0, RGBA.fromHex("#FF0000"))
+buffer.popScissorRect()
+
+// Clean up when done
+buffer.destroy()
+```

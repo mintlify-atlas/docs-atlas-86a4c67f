@@ -1,0 +1,712 @@
+---
+title: Keyboard and Mouse Input
+description: Handle key events, keyboard shortcuts, and mouse interactions in OpenTUI
+---
+
+OpenTUI provides comprehensive input handling with structured key events, modifier support, and mouse interactions including clicks, drags, and scrolling.
+
+## Keyboard Input
+
+### Basic Key Events
+
+Listen for key presses using the `keyInput` event emitter:
+
+```typescript
+import { createCliRenderer, type KeyEvent } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+renderer.keyInput.on("keypress", (key: KeyEvent) => {
+  console.log("Key pressed:", key.name)
+  console.log("Sequence:", key.sequence)
+  console.log("Ctrl:", key.ctrl)
+  console.log("Shift:", key.shift)
+  console.log("Alt:", key.meta)
+})
+```
+
+### KeyEvent Properties
+
+The `KeyEvent` object contains detailed information about the key press:
+
+```typescript
+interface KeyEvent {
+  name: string        // Key name ("a", "enter", "escape", "f1", etc.)
+  sequence: string    // Raw escape sequence from terminal
+  ctrl: boolean       // Ctrl modifier
+  shift: boolean      // Shift modifier
+  meta: boolean       // Alt/Meta modifier
+  option: boolean     // Option key (macOS)
+  super: boolean      // Super/Windows key
+  hyper: boolean      // Hyper key
+}
+```
+
+### Common Key Names
+
+<CodeGroup>
+
+```typescript Letters and Numbers
+key.name === "a"     // Letter keys
+key.name === "1"     // Number keys
+key.name === "space" // Space bar
+```
+
+```typescript Special Keys
+key.name === "enter"
+key.name === "escape"
+key.name === "tab"
+key.name === "backspace"
+key.name === "delete"
+```
+
+```typescript Arrow Keys
+key.name === "up"    || key.name === "arrowup"
+key.name === "down"  || key.name === "arrowdown"
+key.name === "left"  || key.name === "arrowleft"
+key.name === "right" || key.name === "arrowright"
+```
+
+```typescript Function Keys
+key.name === "f1"
+key.name === "f2"
+// ... through f12
+```
+
+</CodeGroup>
+
+## Keyboard Shortcuts
+
+### Detecting Modifier Combinations
+
+Check for keyboard shortcuts by combining key names with modifiers:
+
+```typescript
+renderer.keyInput.on("keypress", (key: KeyEvent) => {
+  // Ctrl+C
+  if (key.ctrl && key.name === "c") {
+    console.log("Copy command")
+  }
+  
+  // Ctrl+Shift+S
+  if (key.ctrl && key.shift && key.name === "s") {
+    console.log("Save As command")
+  }
+  
+  // Alt+F4
+  if (key.meta && key.name === "f4") {
+    console.log("Close command")
+  }
+  
+  // Shift+Tab
+  if (key.shift && key.name === "tab") {
+    console.log("Navigate backward")
+  }
+})
+```
+
+### Building a Shortcut System
+
+Create a reusable shortcut handler:
+
+```typescript
+import type { KeyEvent } from "@opentui/core"
+
+type ShortcutHandler = () => void
+
+interface Shortcut {
+  key: string
+  ctrl?: boolean
+  shift?: boolean
+  meta?: boolean
+  handler: ShortcutHandler
+}
+
+class ShortcutManager {
+  private shortcuts: Shortcut[] = []
+  
+  register(shortcut: Shortcut) {
+    this.shortcuts.push(shortcut)
+  }
+  
+  handleKey(key: KeyEvent): boolean {
+    for (const shortcut of this.shortcuts) {
+      if (
+        key.name === shortcut.key &&
+        (shortcut.ctrl === undefined || key.ctrl === shortcut.ctrl) &&
+        (shortcut.shift === undefined || key.shift === shortcut.shift) &&
+        (shortcut.meta === undefined || key.meta === shortcut.meta)
+      ) {
+        shortcut.handler()
+        return true
+      }
+    }
+    return false
+  }
+}
+
+// Usage
+const shortcuts = new ShortcutManager()
+
+shortcuts.register({
+  key: "s",
+  ctrl: true,
+  handler: () => console.log("Save")
+})
+
+shortcuts.register({
+  key: "q",
+  ctrl: true,
+  handler: () => console.log("Quit")
+})
+
+renderer.keyInput.on("keypress", (key) => {
+  shortcuts.handleKey(key)
+})
+```
+
+## Focus Management
+
+Components like Input and Select need focus to receive keyboard events.
+
+### Manual Focus Control
+
+```typescript
+import { InputRenderable, SelectRenderable } from "@opentui/core"
+
+const input = new InputRenderable(renderer, {
+  id: "username",
+  placeholder: "Username",
+})
+
+const menu = new SelectRenderable(renderer, {
+  id: "menu",
+  options: [
+    { name: "Option 1" },
+    { name: "Option 2" },
+  ],
+})
+
+// Focus the input
+input.focus()
+
+// Check if focused
+if (input.focused) {
+  console.log("Input is focused")
+}
+
+// Remove focus
+input.blur()
+
+// Switch focus
+renderer.keyInput.on("keypress", (key) => {
+  if (key.name === "tab") {
+    if (input.focused) {
+      input.blur()
+      menu.focus()
+    } else {
+      menu.blur()
+      input.focus()
+    }
+  }
+})
+```
+
+### Auto-Focus with Mouse
+
+By default, clicking on a focusable element focuses it. Disable with:
+
+```typescript
+const renderer = await createCliRenderer({
+  autoFocus: false, // Disable auto-focus on click
+})
+```
+
+## Paste Events
+
+Handle pasted content separately from regular keypresses:
+
+```typescript
+renderer.keyInput.on("paste", (event: { text: string }) => {
+  console.log("Pasted text:", event.text)
+  console.log("Length:", event.text.length)
+})
+```
+
+## Mouse Events
+
+### Mouse Event Types
+
+OpenTUI supports various mouse interactions:
+
+```typescript
+import type { MouseEvent } from "@opentui/core"
+
+interface MouseEvent {
+  type: "down" | "up" | "drag" | "over" | "out" | "scroll"
+  x: number           // Terminal column (0-based)
+  y: number           // Terminal row (0-based)
+  button?: number     // 0 = left, 1 = middle, 2 = right
+  scroll?: {
+    direction: "up" | "down"
+  }
+  stopPropagation: () => void
+}
+```
+
+### Handling Mouse Events
+
+Override `onMouseEvent` in custom renderables:
+
+```typescript
+import { BoxRenderable, type MouseEvent } from "@opentui/core"
+
+class ClickableBox extends BoxRenderable {
+  private isHovered = false
+  private isPressed = false
+  
+  protected onMouseEvent(event: MouseEvent): void {
+    switch (event.type) {
+      case "down":
+        if (event.button === 0) { // Left click
+          this.isPressed = true
+          console.log("Clicked at", event.x, event.y)
+          event.stopPropagation()
+        }
+        break
+        
+      case "up":
+        this.isPressed = false
+        break
+        
+      case "over":
+        this.isHovered = true
+        this.backgroundColor = "#FF6B6B" // Highlight on hover
+        break
+        
+      case "out":
+        this.isHovered = false
+        this.backgroundColor = "#3b82f6" // Return to normal
+        break
+        
+      case "scroll":
+        if (event.scroll?.direction === "up") {
+          console.log("Scrolled up")
+        } else {
+          console.log("Scrolled down")
+        }
+        break
+    }
+  }
+}
+```
+
+### Button Example
+
+Create an interactive button with hover and click effects:
+
+```typescript
+import {
+  BoxRenderable,
+  TextRenderable,
+  RGBA,
+  type MouseEvent,
+  type RenderContext,
+} from "@opentui/core"
+
+class Button extends BoxRenderable {
+  private isHovered = false
+  private isPressed = false
+  private onClick?: () => void
+  
+  constructor(
+    ctx: RenderContext,
+    id: string,
+    label: string,
+    onClick?: () => void
+  ) {
+    super(ctx, {
+      id,
+      width: label.length + 4,
+      height: 3,
+      backgroundColor: RGBA.fromHex("#3b82f6"),
+      borderStyle: "rounded",
+      alignItems: "center",
+      justifyContent: "center",
+      border: true,
+    })
+    
+    this.onClick = onClick
+    
+    const text = new TextRenderable(ctx, {
+      id: `${id}-text`,
+      content: label,
+      fg: "#FFFFFF",
+    })
+    this.add(text)
+  }
+  
+  protected onMouseEvent(event: MouseEvent): void {
+    switch (event.type) {
+      case "down":
+        if (event.button === 0) {
+          this.isPressed = true
+          this.backgroundColor = RGBA.fromHex("#1e40af")
+          event.stopPropagation()
+        }
+        break
+        
+      case "up":
+        if (this.isPressed && event.button === 0) {
+          this.onClick?.()
+        }
+        this.isPressed = false
+        this.backgroundColor = this.isHovered 
+          ? RGBA.fromHex("#2563eb")
+          : RGBA.fromHex("#3b82f6")
+        break
+        
+      case "over":
+        this.isHovered = true
+        if (!this.isPressed) {
+          this.backgroundColor = RGBA.fromHex("#2563eb")
+        }
+        break
+        
+      case "out":
+        this.isHovered = false
+        this.isPressed = false
+        this.backgroundColor = RGBA.fromHex("#3b82f6")
+        break
+    }
+  }
+}
+
+// Usage
+const button = new Button(
+  renderer,
+  "save-button",
+  "Save",
+  () => console.log("Save clicked!")
+)
+
+renderer.root.add(button)
+```
+
+## Drag and Drop
+
+Implement draggable elements:
+
+```typescript
+import { BoxRenderable, type MouseEvent } from "@opentui/core"
+
+class DraggableBox extends BoxRenderable {
+  private isDragging = false
+  private dragStartX = 0
+  private dragStartY = 0
+  private startLeft = 0
+  private startTop = 0
+  
+  protected onMouseEvent(event: MouseEvent): void {
+    switch (event.type) {
+      case "down":
+        if (event.button === 0) {
+          this.isDragging = true
+          this.dragStartX = event.x
+          this.dragStartY = event.y
+          this.startLeft = this.left || 0
+          this.startTop = this.top || 0
+          event.stopPropagation()
+        }
+        break
+        
+      case "drag":
+        if (this.isDragging) {
+          const deltaX = event.x - this.dragStartX
+          const deltaY = event.y - this.dragStartY
+          
+          this.setPosition({
+            left: this.startLeft + deltaX,
+            top: this.startTop + deltaY,
+          })
+          event.stopPropagation()
+        }
+        break
+        
+      case "up":
+        this.isDragging = false
+        break
+    }
+  }
+}
+
+// Usage
+const draggable = new DraggableBox(renderer, {
+  id: "draggable",
+  position: "absolute",
+  left: 10,
+  top: 5,
+  width: 20,
+  height: 10,
+  backgroundColor: "#FF6B6B",
+  borderStyle: "single",
+})
+```
+
+## Scroll Handling
+
+Handle mouse wheel scrolling:
+
+```typescript
+import { BoxRenderable, type MouseEvent } from "@opentui/core"
+
+class ScrollableBox extends BoxRenderable {
+  private scrollOffset = 0
+  
+  protected onMouseEvent(event: MouseEvent): void {
+    if (event.type === "scroll" && event.scroll) {
+      if (event.scroll.direction === "up") {
+        this.scrollOffset = Math.max(0, this.scrollOffset - 1)
+      } else {
+        this.scrollOffset++
+      }
+      
+      console.log("Scroll offset:", this.scrollOffset)
+      event.stopPropagation()
+    }
+  }
+}
+```
+
+## Input Components
+
+Built-in components handle their own keyboard input when focused.
+
+### InputRenderable
+
+```typescript
+import { InputRenderable, InputRenderableEvents } from "@opentui/core"
+
+const input = new InputRenderable(renderer, {
+  id: "email",
+  width: 40,
+  placeholder: "Enter email...",
+})
+
+input.on(InputRenderableEvents.INPUT, (value: string) => {
+  console.log("Typing:", value)
+})
+
+input.on(InputRenderableEvents.CHANGE, (value: string) => {
+  console.log("Value changed:", value)
+})
+
+input.on(InputRenderableEvents.ENTER, (value: string) => {
+  console.log("Submitted:", value)
+})
+
+input.focus() // Must be focused to receive input
+```
+
+### SelectRenderable
+
+Navigate with arrow keys (up/k, down/j) and select with Enter:
+
+```typescript
+import { SelectRenderable, SelectRenderableEvents } from "@opentui/core"
+
+const menu = new SelectRenderable(renderer, {
+  id: "menu",
+  width: 30,
+  height: 10,
+  options: [
+    { name: "New File", description: "Create a new file" },
+    { name: "Open File", description: "Open existing file" },
+    { name: "Save", description: "Save current file" },
+  ],
+})
+
+menu.on(SelectRenderableEvents.ITEM_SELECTED, (index, option) => {
+  console.log(`Selected: ${option.name} (index ${index})`)
+})
+
+menu.focus()
+```
+
+### TabSelectRenderable
+
+Navigate with left/right arrows (or [/]) and select with Enter:
+
+```typescript
+import { TabSelectRenderable, TabSelectRenderableEvents } from "@opentui/core"
+
+const tabs = new TabSelectRenderable(renderer, {
+  id: "tabs",
+  width: 60,
+  options: [
+    { name: "Home", description: "Dashboard" },
+    { name: "Files", description: "File browser" },
+    { name: "Settings", description: "Configuration" },
+  ],
+  tabWidth: 20,
+})
+
+tabs.on(TabSelectRenderableEvents.ITEM_SELECTED, (index, option) => {
+  console.log(`Tab selected: ${option.name}`)
+})
+
+tabs.focus()
+```
+
+## Complete Example: Navigation Menu
+
+```typescript
+import {
+  createCliRenderer,
+  BoxRenderable,
+  TextRenderable,
+  SelectRenderable,
+  SelectRenderableEvents,
+  type KeyEvent,
+  t,
+  bold,
+  fg,
+} from "@opentui/core"
+
+const renderer = await createCliRenderer({
+  exitOnCtrlC: true,
+})
+
+renderer.setBackgroundColor("#001122")
+
+// Header
+const header = new BoxRenderable(renderer, {
+  id: "header",
+  height: 3,
+  backgroundColor: "#3b82f6",
+  borderStyle: "single",
+  alignItems: "center",
+})
+
+const title = new TextRenderable(renderer, {
+  id: "title",
+  content: "NAVIGATION DEMO",
+  fg: "#FFFFFF",
+})
+
+header.add(title)
+
+// Menu
+const menu = new SelectRenderable(renderer, {
+  id: "menu",
+  width: "auto",
+  height: "auto",
+  flexGrow: 1,
+  options: [
+    { name: "Dashboard", description: "View overview" },
+    { name: "Projects", description: "Manage projects" },
+    { name: "Settings", description: "Configure app" },
+    { name: "Help", description: "Get help" },
+    { name: "Exit", description: "Quit application" },
+  ],
+})
+
+menu.on(SelectRenderableEvents.ITEM_SELECTED, (index, option) => {
+  console.log(`Selected: ${option.name}`)
+  
+  if (option.name === "Exit") {
+    process.exit(0)
+  }
+})
+
+// Footer with key hints
+const footer = new BoxRenderable(renderer, {
+  id: "footer",
+  height: 3,
+  backgroundColor: "#1e40af",
+  borderStyle: "single",
+  alignItems: "center",
+  justifyContent: "center",
+})
+
+const hints = new TextRenderable(renderer, {
+  id: "hints",
+  content: t`${fg("#00FFFF")("↑/k")} ${fg("#FFFFFF")("up")} | ${fg("#00FFFF")("↓/j")} ${fg("#FFFFFF")("down")} | ${fg("#00FFFF")("Enter")} ${fg("#FFFFFF")("select")} | ${fg("#00FFFF")("Ctrl+C")} ${fg("#FFFFFF")("exit")}`,
+})
+
+footer.add(hints)
+
+// Assemble
+renderer.root.add(header)
+renderer.root.add(menu)
+renderer.root.add(footer)
+
+menu.focus()
+
+// Global keyboard shortcuts
+renderer.keyInput.on("keypress", (key: KeyEvent) => {
+  if (key.ctrl && key.name === "h") {
+    console.log("Help triggered")
+  }
+  
+  if (key.name === "f1") {
+    console.log("F1 help triggered")
+  }
+})
+
+renderer.start()
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always Check Focus State">
+    Components should only handle input when focused:
+    
+    ```typescript
+    renderer.keyInput.on("keypress", (key) => {
+      if (input.focused && key.name === "escape") {
+        input.blur()
+      }
+    })
+    ```
+  </Accordion>
+  
+  <Accordion title="Stop Event Propagation">
+    Prevent events from bubbling when handled:
+    
+    ```typescript
+    protected onMouseEvent(event: MouseEvent): void {
+      if (event.type === "down") {
+        this.handleClick()
+        event.stopPropagation() // Don't pass to parent
+      }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Provide Visual Feedback">
+    Always show when elements are focused or hovered:
+    
+    ```typescript
+    input.on(RenderableEvents.FOCUSED, () => {
+      input.backgroundColor = "#1a1a1a"
+    })
+    
+    input.on(RenderableEvents.BLURRED, () => {
+      input.backgroundColor = "#000000"
+    })
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Console Overlay" icon="terminal" href="/guides/console-overlay">
+    Debug with the built-in console
+  </Card>
+  <Card title="Animations" icon="wand-magic-sparkles" href="/guides/animations">
+    Animate properties smoothly
+  </Card>
+</CardGroup>

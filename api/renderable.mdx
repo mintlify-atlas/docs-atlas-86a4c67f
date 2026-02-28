@@ -1,0 +1,710 @@
+---
+title: 'Renderable'
+description: 'Base class for all UI elements with layout, styling, and event handling'
+---
+
+## Overview
+
+The `Renderable` class is the foundation for all UI components in OpenTUI. It provides layout management using Yoga (Flexbox), event handling, lifecycle management, and rendering capabilities.
+
+## Base Classes
+
+### BaseRenderable
+
+The most basic renderable interface.
+
+<ResponseField name="id" type="string">
+  Unique identifier for the renderable
+</ResponseField>
+
+<ResponseField name="num" type="number">
+  Internal numeric identifier (auto-assigned)
+</ResponseField>
+
+<ResponseField name="visible" type="boolean">
+  Whether the renderable is visible
+</ResponseField>
+
+<ResponseField name="parent" type="BaseRenderable | null">
+  Parent renderable (null for root)
+</ResponseField>
+
+### Renderable
+
+Extends `BaseRenderable` with full layout, styling, and event support.
+
+## Constructor
+
+```typescript
+class Renderable extends BaseRenderable {
+  constructor(ctx: RenderContext, options: RenderableOptions)
+}
+```
+
+<ParamField path="ctx" type="RenderContext">
+  The renderer context (usually `renderer`)
+</ParamField>
+
+<ParamField path="options" type="RenderableOptions">
+  Configuration options
+</ParamField>
+
+## Options
+
+### RenderableOptions
+
+Configuration interface for creating renderables.
+
+#### Layout Properties
+
+<ParamField path="width" type="number | 'auto' | `${number}%`">
+  Width in cells, auto, or percentage
+</ParamField>
+
+<ParamField path="height" type="number | 'auto' | `${number}%`">
+  Height in cells, auto, or percentage
+</ParamField>
+
+<ParamField path="flexGrow" type="number">
+  Flex grow factor (Flexbox)
+</ParamField>
+
+<ParamField path="flexShrink" type="number">
+  Flex shrink factor (Flexbox)
+</ParamField>
+
+<ParamField path="flexBasis" type="number | 'auto'">
+  Flex basis (Flexbox)
+</ParamField>
+
+<ParamField path="flexDirection" type="'row' | 'column' | 'row-reverse' | 'column-reverse'">
+  Flex direction (Flexbox)
+</ParamField>
+
+<ParamField path="flexWrap" type="'nowrap' | 'wrap' | 'wrap-reverse'">
+  Flex wrap (Flexbox)
+</ParamField>
+
+<ParamField path="alignItems" type="'flex-start' | 'flex-end' | 'center' | 'stretch' | 'baseline'">
+  Align items (Flexbox)
+</ParamField>
+
+<ParamField path="justifyContent" type="'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around' | 'space-evenly'">
+  Justify content (Flexbox)
+</ParamField>
+
+<ParamField path="alignSelf" type="'auto' | 'flex-start' | 'flex-end' | 'center' | 'stretch' | 'baseline'">
+  Align self (Flexbox)
+</ParamField>
+
+<ParamField path="position" type="'relative' | 'absolute'">
+  Position type
+</ParamField>
+
+<ParamField path="overflow" type="'visible' | 'hidden' | 'scroll'">
+  Overflow behavior
+</ParamField>
+
+<ParamField path="top" type="number | 'auto' | `${number}%`">
+  Top position (for absolute positioning)
+</ParamField>
+
+<ParamField path="right" type="number | 'auto' | `${number}%`">
+  Right position
+</ParamField>
+
+<ParamField path="bottom" type="number | 'auto' | `${number}%`">
+  Bottom position
+</ParamField>
+
+<ParamField path="left" type="number | 'auto' | `${number}%`">
+  Left position
+</ParamField>
+
+<ParamField path="minWidth" type="number | 'auto' | `${number}%`">
+  Minimum width
+</ParamField>
+
+<ParamField path="minHeight" type="number | 'auto' | `${number}%`">
+  Minimum height
+</ParamField>
+
+<ParamField path="maxWidth" type="number | 'auto' | `${number}%`">
+  Maximum width
+</ParamField>
+
+<ParamField path="maxHeight" type="number | 'auto' | `${number}%`">
+  Maximum height
+</ParamField>
+
+<ParamField path="margin" type="number | 'auto' | `${number}%`">
+  Margin on all sides
+</ParamField>
+
+<ParamField path="marginX" type="number | 'auto' | `${number}%`">
+  Horizontal margin (left and right)
+</ParamField>
+
+<ParamField path="marginY" type="number | 'auto' | `${number}%`">
+  Vertical margin (top and bottom)
+</ParamField>
+
+<ParamField path="marginTop" type="number | 'auto' | `${number}%`">
+  Top margin
+</ParamField>
+
+<ParamField path="marginRight" type="number | 'auto' | `${number}%`">
+  Right margin
+</ParamField>
+
+<ParamField path="marginBottom" type="number | 'auto' | `${number}%`">
+  Bottom margin
+</ParamField>
+
+<ParamField path="marginLeft" type="number | 'auto' | `${number}%`">
+  Left margin
+</ParamField>
+
+<ParamField path="padding" type="number | `${number}%`">
+  Padding on all sides
+</ParamField>
+
+<ParamField path="paddingX" type="number | `${number}%`">
+  Horizontal padding
+</ParamField>
+
+<ParamField path="paddingY" type="number | `${number}%`">
+  Vertical padding
+</ParamField>
+
+<ParamField path="paddingTop" type="number | `${number}%`">
+  Top padding
+</ParamField>
+
+<ParamField path="paddingRight" type="number | `${number}%`">
+  Right padding
+</ParamField>
+
+<ParamField path="paddingBottom" type="number | `${number}%`">
+  Bottom padding
+</ParamField>
+
+<ParamField path="paddingLeft" type="number | `${number}%`">
+  Left padding
+</ParamField>
+
+#### Visual Properties
+
+<ParamField path="zIndex" type="number">
+  Z-index for layering (higher values render on top)
+</ParamField>
+
+<ParamField path="visible" type="boolean" default={true}>
+  Whether the element is visible
+</ParamField>
+
+<ParamField path="opacity" type="number">
+  Opacity (0 = transparent, 1 = opaque)
+</ParamField>
+
+#### Behavior Properties
+
+<ParamField path="buffered" type="boolean">
+  Use a frame buffer for rendering (performance optimization)
+</ParamField>
+
+<ParamField path="live" type="boolean">
+  Keep the renderer running continuously
+</ParamField>
+
+#### Hooks
+
+<ParamField path="renderBefore" type="(buffer: OptimizedBuffer, deltaTime: number) => void">
+  Called before rendering this element
+</ParamField>
+
+<ParamField path="renderAfter" type="(buffer: OptimizedBuffer, deltaTime: number) => void">
+  Called after rendering this element
+</ParamField>
+
+#### Event Handlers
+
+<ParamField path="onMouse" type="(event: MouseEvent) => void">
+  General mouse event handler (all mouse events)
+</ParamField>
+
+<ParamField path="onMouseDown" type="(event: MouseEvent) => void">
+  Mouse button down event
+</ParamField>
+
+<ParamField path="onMouseUp" type="(event: MouseEvent) => void">
+  Mouse button up event
+</ParamField>
+
+<ParamField path="onMouseMove" type="(event: MouseEvent) => void">
+  Mouse move event
+</ParamField>
+
+<ParamField path="onMouseDrag" type="(event: MouseEvent) => void">
+  Mouse drag event
+</ParamField>
+
+<ParamField path="onMouseDragEnd" type="(event: MouseEvent) => void">
+  Mouse drag end event
+</ParamField>
+
+<ParamField path="onMouseDrop" type="(event: MouseEvent) => void">
+  Mouse drop event
+</ParamField>
+
+<ParamField path="onMouseOver" type="(event: MouseEvent) => void">
+  Mouse over event (hover)
+</ParamField>
+
+<ParamField path="onMouseOut" type="(event: MouseEvent) => void">
+  Mouse out event (leave)
+</ParamField>
+
+<ParamField path="onMouseScroll" type="(event: MouseEvent) => void">
+  Mouse scroll event
+</ParamField>
+
+<ParamField path="onKeyDown" type="(event: KeyEvent) => void">
+  Key down event (when focused)
+</ParamField>
+
+<ParamField path="onPaste" type="(event: PasteEvent) => void">
+  Paste event (when focused)
+</ParamField>
+
+<ParamField path="onSizeChange" type="() => void">
+  Called when the element's size changes
+</ParamField>
+
+## Properties
+
+### Position and Size
+
+<ResponseField name="x" type="number">
+  Absolute x position in the terminal
+</ResponseField>
+
+<ResponseField name="y" type="number">
+  Absolute y position in the terminal
+</ResponseField>
+
+<ResponseField name="width" type="number">
+  Computed width in cells
+</ResponseField>
+
+<ResponseField name="height" type="number">
+  Computed height in cells
+</ResponseField>
+
+<ResponseField name="translateX" type="number">
+  X translation offset
+</ResponseField>
+
+<ResponseField name="translateY" type="number">
+  Y translation offset
+</ResponseField>
+
+### State
+
+<ResponseField name="visible" type="boolean">
+  Visibility state (can be set to show/hide)
+</ResponseField>
+
+<ResponseField name="opacity" type="number">
+  Opacity value (0-1)
+</ResponseField>
+
+<ResponseField name="zIndex" type="number">
+  Z-index for rendering order
+</ResponseField>
+
+<ResponseField name="focusable" type="boolean">
+  Whether the element can receive keyboard focus
+</ResponseField>
+
+<ResponseField name="focused" type="boolean">
+  Whether the element currently has focus
+</ResponseField>
+
+<ResponseField name="live" type="boolean">
+  Whether the element keeps the renderer running
+</ResponseField>
+
+<ResponseField name="isDestroyed" type="boolean">
+  Whether the element has been destroyed
+</ResponseField>
+
+### Context
+
+<ResponseField name="ctx" type="RenderContext">
+  The renderer context
+</ResponseField>
+
+## Methods
+
+### Hierarchy Management
+
+#### add()
+
+Add a child element.
+
+```typescript
+add(obj: Renderable | VNode | unknown, index?: number): number
+```
+
+<ParamField path="obj" type="Renderable | VNode | unknown">
+  Child element to add
+</ParamField>
+
+<ParamField path="index" type="number">
+  Optional index to insert at
+</ParamField>
+
+<ResponseField name="number" type="number">
+  Index where the child was inserted (-1 if failed)
+</ResponseField>
+
+#### remove()
+
+Remove a child element by ID.
+
+```typescript
+remove(id: string): void
+```
+
+<ParamField path="id" type="string">
+  ID of the child to remove
+</ParamField>
+
+#### insertBefore()
+
+Insert a child before another child.
+
+```typescript
+insertBefore(obj: Renderable | VNode | unknown, anchor: Renderable | unknown): number
+```
+
+<ParamField path="obj" type="Renderable | VNode | unknown">
+  Element to insert
+</ParamField>
+
+<ParamField path="anchor" type="Renderable | unknown">
+  Anchor element to insert before
+</ParamField>
+
+<ResponseField name="number" type="number">
+  Index where the element was inserted
+</ResponseField>
+
+#### getChildren()
+
+Get all children.
+
+```typescript
+getChildren(): Renderable[]
+```
+
+<ResponseField name="Renderable[]" type="Renderable[]">
+  Array of child elements
+</ResponseField>
+
+#### getChildrenCount()
+
+Get the number of children.
+
+```typescript
+getChildrenCount(): number
+```
+
+<ResponseField name="number" type="number">
+  Number of children
+</ResponseField>
+
+#### getRenderable()
+
+Get a child by ID.
+
+```typescript
+getRenderable(id: string): Renderable | undefined
+```
+
+<ParamField path="id" type="string">
+  Child ID
+</ParamField>
+
+<ResponseField name="Renderable | undefined" type="Renderable | undefined">
+  The child element or undefined
+</ResponseField>
+
+#### findDescendantById()
+
+Recursively find a descendant by ID.
+
+```typescript
+findDescendantById(id: string): Renderable | undefined
+```
+
+<ParamField path="id" type="string">
+  Descendant ID
+</ParamField>
+
+<ResponseField name="Renderable | undefined" type="Renderable | undefined">
+  The descendant or undefined
+</ResponseField>
+
+### Focus Management
+
+#### focus()
+
+Give keyboard focus to this element.
+
+```typescript
+focus(): void
+```
+
+#### blur()
+
+Remove keyboard focus from this element.
+
+```typescript
+blur(): void
+```
+
+### Rendering
+
+#### requestRender()
+
+Request a re-render.
+
+```typescript
+requestRender(): void
+```
+
+### Lifecycle
+
+#### destroy()
+
+Destroy this element and remove it from the hierarchy.
+
+```typescript
+destroy(): void
+```
+
+#### destroyRecursively()
+
+Destroy this element and all descendants.
+
+```typescript
+destroyRecursively(): void
+```
+
+### Layout
+
+#### getLayoutNode()
+
+Get the Yoga layout node.
+
+```typescript
+getLayoutNode(): YogaNode
+```
+
+<ResponseField name="YogaNode" type="YogaNode">
+  The Yoga layout node
+</ResponseField>
+
+### Overridable Methods
+
+These methods can be overridden in subclasses to customize behavior.
+
+#### renderSelf()
+
+Render the element itself (called during render pass).
+
+```typescript
+protected renderSelf(buffer: OptimizedBuffer, deltaTime: number): void
+```
+
+<ParamField path="buffer" type="OptimizedBuffer">
+  Buffer to render to
+</ParamField>
+
+<ParamField path="deltaTime" type="number">
+  Time since last render (in milliseconds)
+</ParamField>
+
+#### onUpdate()
+
+Called before rendering (for animations, state updates, etc.).
+
+```typescript
+protected onUpdate(deltaTime: number): void
+```
+
+<ParamField path="deltaTime" type="number">
+  Time since last update
+</ParamField>
+
+#### onResize()
+
+Called when the element is resized.
+
+```typescript
+protected onResize(width: number, height: number): void
+```
+
+<ParamField path="width" type="number">
+  New width
+</ParamField>
+
+<ParamField path="height" type="number">
+  New height
+</ParamField>
+
+#### onRemove()
+
+Called when the element is removed from its parent.
+
+```typescript
+protected onRemove(): void
+```
+
+#### destroySelf()
+
+Called during destruction (for cleanup).
+
+```typescript
+protected destroySelf(): void
+```
+
+#### onMouseEvent()
+
+Called for mouse events (after event handlers).
+
+```typescript
+protected onMouseEvent(event: MouseEvent): void
+```
+
+<ParamField path="event" type="MouseEvent">
+  The mouse event
+</ParamField>
+
+#### handleKeyPress()
+
+Called for key press events (when focused).
+
+```typescript
+handleKeyPress?(key: KeyEvent): boolean
+```
+
+<ParamField path="key" type="KeyEvent">
+  The key event
+</ParamField>
+
+<ResponseField name="boolean" type="boolean">
+  Whether the event was handled
+</ResponseField>
+
+#### handlePaste()
+
+Called for paste events (when focused).
+
+```typescript
+handlePaste?(event: PasteEvent): void
+```
+
+<ParamField path="event" type="PasteEvent">
+  The paste event
+</ParamField>
+
+## Events
+
+### LayoutEvents
+
+#### layout-changed
+
+Emitted when layout changes.
+
+```typescript
+renderable.on('layout-changed', () => {
+  console.log('Layout changed')
+})
+```
+
+#### resize
+
+Emitted when the element is resized.
+
+```typescript
+renderable.on('resize', () => {
+  console.log('Element resized')
+})
+```
+
+### RenderableEvents
+
+#### focused
+
+Emitted when the element gains focus.
+
+```typescript
+renderable.on('focused', () => {
+  console.log('Element focused')
+})
+```
+
+#### blurred
+
+Emitted when the element loses focus.
+
+```typescript
+renderable.on('blurred', () => {
+  console.log('Element blurred')
+})
+```
+
+## Example
+
+```typescript
+import { Renderable } from '@opentui/core'
+
+class CustomButton extends Renderable {
+  constructor(ctx: RenderContext, text: string) {
+    super(ctx, {
+      width: text.length + 4,
+      height: 3,
+      focusable: true,
+    })
+    
+    this.text = text
+  }
+  
+  protected renderSelf(buffer: OptimizedBuffer) {
+    // Draw button background
+    buffer.fillRect(0, 0, this.width, this.height, 
+      RGBA.fromHex(this.focused ? '#0066cc' : '#004499'))
+    
+    // Draw button text
+    const x = Math.floor((this.width - this.text.length) / 2)
+    const y = Math.floor(this.height / 2)
+    buffer.drawText(this.text, x, y, RGBA.fromHex('#ffffff'))
+  }
+  
+  handleKeyPress(key: KeyEvent): boolean {
+    if (key.name === 'enter' || key.name === 'space') {
+      this.emit('click')
+      return true
+    }
+    return false
+  }
+}
+
+// Usage
+const button = new CustomButton(renderer, 'Click Me')
+button.on('click', () => console.log('Button clicked!'))
+renderer.root.add(button)
+```

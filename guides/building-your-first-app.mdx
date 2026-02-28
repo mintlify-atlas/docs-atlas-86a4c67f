@@ -1,0 +1,548 @@
+---
+title: Building Your First App
+description: Complete tutorial for building a terminal UI application with OpenTUI
+---
+
+This tutorial will guide you through building a complete terminal user interface application with OpenTUI, from setup to deployment.
+
+## What We'll Build
+
+We'll create a task manager application featuring:
+- A list of tasks with selection
+- Input field for adding new tasks
+- Status bar showing key bindings
+- Responsive layout that adapts to terminal size
+
+## Prerequisites
+
+Make sure you have [Bun](https://bun.sh) installed:
+
+```bash
+curl -fsSL https://bun.sh/install | bash
+```
+
+<Steps>
+
+### Install OpenTUI
+
+Create a new project and install OpenTUI:
+
+```bash
+mkdir task-manager
+cd task-manager
+bun init -y
+bun add @opentui/core
+```
+
+### Create the Basic Structure
+
+Create `index.ts` with the basic renderer setup:
+
+```typescript
+import { createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer({
+  exitOnCtrlC: true,
+  targetFps: 30,
+})
+
+renderer.setBackgroundColor("#001122")
+renderer.start()
+
+console.log("Task Manager initialized!")
+```
+
+Run it to verify the setup:
+
+```bash
+bun index.ts
+```
+
+You should see a dark blue background. Press `` ` `` to open the console, or Ctrl+C to exit.
+
+### Add a Header
+
+Let's add a header with the app title:
+
+```typescript
+import { createCliRenderer, BoxRenderable, TextRenderable } from "@opentui/core"
+
+const renderer = await createCliRenderer({
+  exitOnCtrlC: true,
+  targetFps: 30,
+})
+
+renderer.setBackgroundColor("#001122")
+
+// Create header
+const header = new BoxRenderable(renderer, {
+  id: "header",
+  width: "auto",
+  height: 3,
+  backgroundColor: "#3b82f6",
+  borderStyle: "single",
+  alignItems: "center",
+  border: true,
+})
+
+const headerText = new TextRenderable(renderer, {
+  id: "header-text",
+  content: "TASK MANAGER",
+  fg: "#ffffff",
+})
+
+header.add(headerText)
+renderer.root.add(header)
+
+renderer.start()
+```
+
+### Create the Task List
+
+Add a scrollable list to display tasks:
+
+```typescript
+import {
+  createCliRenderer,
+  BoxRenderable,
+  TextRenderable,
+  SelectRenderable,
+  SelectRenderableEvents,
+} from "@opentui/core"
+
+// ... previous header code ...
+
+// Task data
+const tasks = [
+  { name: "Write documentation", completed: false },
+  { name: "Fix bug in parser", completed: true },
+  { name: "Review pull requests", completed: false },
+]
+
+// Create task list
+const taskList = new SelectRenderable(renderer, {
+  id: "task-list",
+  width: "auto",
+  height: "auto",
+  flexGrow: 1,
+  options: tasks.map((task, i) => ({
+    name: `${task.completed ? "✓" : "○"} ${task.name}`,
+    description: task.completed ? "Completed" : "Pending",
+  })),
+  position: "relative",
+})
+
+taskList.on(SelectRenderableEvents.ITEM_SELECTED, (index, option) => {
+  console.log(`Selected task: ${tasks[index].name}`)
+  // Toggle completion
+  tasks[index].completed = !tasks[index].completed
+  updateTaskList()
+})
+
+function updateTaskList() {
+  taskList.setOptions(
+    tasks.map((task) => ({
+      name: `${task.completed ? "✓" : "○"} ${task.name}`,
+      description: task.completed ? "Completed" : "Pending",
+    }))
+  )
+}
+
+renderer.root.add(taskList)
+taskList.focus()
+```
+
+### Add Input for New Tasks
+
+Create an input field to add new tasks:
+
+```typescript
+import {
+  createCliRenderer,
+  BoxRenderable,
+  TextRenderable,
+  SelectRenderable,
+  SelectRenderableEvents,
+  InputRenderable,
+  InputRenderableEvents,
+} from "@opentui/core"
+
+// ... previous code ...
+
+// Create input container
+const inputContainer = new BoxRenderable(renderer, {
+  id: "input-container",
+  width: "auto",
+  height: 5,
+  borderStyle: "single",
+  border: true,
+  padding: 1,
+})
+
+const inputLabel = new TextRenderable(renderer, {
+  id: "input-label",
+  content: "New Task:",
+  fg: "#00FFFF",
+})
+
+const taskInput = new InputRenderable(renderer, {
+  id: "task-input",
+  width: "auto",
+  placeholder: "Enter task name...",
+  focusedBackgroundColor: "#1a1a1a",
+})
+
+taskInput.on(InputRenderableEvents.ENTER, (value) => {
+  if (value.trim()) {
+    tasks.push({ name: value, completed: false })
+    updateTaskList()
+    taskInput.value = ""
+    console.log(`Added task: ${value}`)
+  }
+})
+
+inputContainer.add(inputLabel)
+inputContainer.add(taskInput)
+renderer.root.add(inputContainer)
+```
+
+### Add a Footer with Controls
+
+Create a footer showing available keyboard shortcuts:
+
+```typescript
+// Create footer
+const footer = new BoxRenderable(renderer, {
+  id: "footer",
+  width: "auto",
+  height: 3,
+  backgroundColor: "#1e40af",
+  borderStyle: "single",
+  alignItems: "center",
+  justifyContent: "center",
+  border: true,
+})
+
+const footerText = new TextRenderable(renderer, {
+  id: "footer-text",
+  content: "↑/↓: Navigate | Enter: Toggle | Tab: Switch Focus | Ctrl+C: Exit",
+  fg: "#ffffff",
+})
+
+footer.add(footerText)
+renderer.root.add(footer)
+```
+
+### Handle Keyboard Navigation
+
+Add Tab key navigation between the list and input:
+
+```typescript
+import type { KeyEvent } from "@opentui/core"
+
+let focusedElement: "list" | "input" = "list"
+
+renderer.keyInput.on("keypress", (key: KeyEvent) => {
+  if (key.name === "tab") {
+    if (focusedElement === "list") {
+      taskList.blur()
+      taskInput.focus()
+      focusedElement = "input"
+    } else {
+      taskInput.blur()
+      taskList.focus()
+      focusedElement = "list"
+    }
+  }
+})
+```
+
+### Add Dynamic Updates
+
+Make the UI update in real-time with a counter:
+
+```typescript
+// Add a status indicator
+const statusText = new TextRenderable(renderer, {
+  id: "status",
+  content: "",
+  position: "absolute",
+  right: 2,
+  top: 1,
+  fg: "#00FF00",
+})
+renderer.root.add(statusText)
+
+// Update status every second
+setInterval(() => {
+  const completed = tasks.filter((t) => t.completed).length
+  const total = tasks.length
+  statusText.content = `${completed}/${total} completed`
+}, 1000)
+```
+
+### Complete Application
+
+Here's the full code:
+
+```typescript
+import {
+  createCliRenderer,
+  BoxRenderable,
+  TextRenderable,
+  SelectRenderable,
+  SelectRenderableEvents,
+  InputRenderable,
+  InputRenderableEvents,
+  type KeyEvent,
+} from "@opentui/core"
+
+const renderer = await createCliRenderer({
+  exitOnCtrlC: true,
+  targetFps: 30,
+})
+
+renderer.setBackgroundColor("#001122")
+
+// Data
+const tasks = [
+  { name: "Write documentation", completed: false },
+  { name: "Fix bug in parser", completed: true },
+  { name: "Review pull requests", completed: false },
+]
+
+let focusedElement: "list" | "input" = "list"
+
+// Header
+const header = new BoxRenderable(renderer, {
+  id: "header",
+  width: "auto",
+  height: 3,
+  backgroundColor: "#3b82f6",
+  borderStyle: "single",
+  alignItems: "center",
+  border: true,
+})
+
+const headerText = new TextRenderable(renderer, {
+  id: "header-text",
+  content: "TASK MANAGER",
+  fg: "#ffffff",
+})
+
+header.add(headerText)
+
+// Task List
+const taskList = new SelectRenderable(renderer, {
+  id: "task-list",
+  width: "auto",
+  height: "auto",
+  flexGrow: 1,
+  options: [],
+})
+
+function updateTaskList() {
+  taskList.setOptions(
+    tasks.map((task) => ({
+      name: `${task.completed ? "✓" : "○"} ${task.name}`,
+      description: task.completed ? "Completed" : "Pending",
+    }))
+  )
+}
+
+taskList.on(SelectRenderableEvents.ITEM_SELECTED, (index) => {
+  tasks[index].completed = !tasks[index].completed
+  updateTaskList()
+})
+
+// Input
+const inputContainer = new BoxRenderable(renderer, {
+  id: "input-container",
+  width: "auto",
+  height: 5,
+  borderStyle: "single",
+  border: true,
+  padding: 1,
+})
+
+const inputLabel = new TextRenderable(renderer, {
+  id: "input-label",
+  content: "New Task:",
+  fg: "#00FFFF",
+})
+
+const taskInput = new InputRenderable(renderer, {
+  id: "task-input",
+  width: "auto",
+  placeholder: "Enter task name...",
+})
+
+taskInput.on(InputRenderableEvents.ENTER, (value) => {
+  if (value.trim()) {
+    tasks.push({ name: value, completed: false })
+    updateTaskList()
+    taskInput.value = ""
+  }
+})
+
+inputContainer.add(inputLabel)
+inputContainer.add(taskInput)
+
+// Footer
+const footer = new BoxRenderable(renderer, {
+  id: "footer",
+  width: "auto",
+  height: 3,
+  backgroundColor: "#1e40af",
+  borderStyle: "single",
+  alignItems: "center",
+  justifyContent: "center",
+  border: true,
+})
+
+const footerText = new TextRenderable(renderer, {
+  id: "footer-text",
+  content: "↑/↓: Navigate | Enter: Toggle | Tab: Switch Focus | Ctrl+C: Exit",
+  fg: "#ffffff",
+})
+
+footer.add(footerText)
+
+// Status
+const statusText = new TextRenderable(renderer, {
+  id: "status",
+  content: "",
+  position: "absolute",
+  right: 2,
+  top: 1,
+  fg: "#00FF00",
+})
+
+// Assemble UI
+renderer.root.add(header)
+renderer.root.add(taskList)
+renderer.root.add(inputContainer)
+renderer.root.add(footer)
+renderer.root.add(statusText)
+
+// Keyboard navigation
+renderer.keyInput.on("keypress", (key: KeyEvent) => {
+  if (key.name === "tab") {
+    if (focusedElement === "list") {
+      taskList.blur()
+      taskInput.focus()
+      focusedElement = "input"
+    } else {
+      taskInput.blur()
+      taskList.focus()
+      focusedElement = "list"
+    }
+  }
+})
+
+// Update status
+setInterval(() => {
+  const completed = tasks.filter((t) => t.completed).length
+  statusText.content = `${completed}/${tasks.length} completed`
+}, 1000)
+
+updateTaskList()
+taskList.focus()
+renderer.start()
+```
+
+</Steps>
+
+## Running Your App
+
+Run your task manager:
+
+```bash
+bun index.ts
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Styling and Colors" icon="palette" href="/guides/styling-and-colors">
+    Learn about RGBA colors and text styling
+  </Card>
+  <Card title="Keyboard and Mouse" icon="keyboard" href="/guides/keyboard-and-mouse">
+    Handle user input with key events and mouse interactions
+  </Card>
+  <Card title="Animations" icon="wand-magic-sparkles" href="/guides/animations">
+    Add smooth animations with the Timeline system
+  </Card>
+  <Card title="Console Overlay" icon="terminal" href="/guides/console-overlay">
+    Debug your app with the built-in console
+  </Card>
+</CardGroup>
+
+## Common Patterns
+
+### Saving Data
+
+Persist tasks to a JSON file:
+
+```typescript
+import { writeFileSync, readFileSync } from "fs"
+
+function saveTasks() {
+  writeFileSync("tasks.json", JSON.stringify(tasks, null, 2))
+}
+
+function loadTasks() {
+  try {
+    const data = readFileSync("tasks.json", "utf-8")
+    return JSON.parse(data)
+  } catch {
+    return []
+  }
+}
+
+// Load on start
+const tasks = loadTasks()
+
+// Save when tasks change
+taskInput.on(InputRenderableEvents.ENTER, (value) => {
+  if (value.trim()) {
+    tasks.push({ name: value, completed: false })
+    saveTasks()
+    updateTaskList()
+    taskInput.value = ""
+  }
+})
+```
+
+### Handling Resize
+
+Adapt your layout when the terminal is resized:
+
+```typescript
+renderer.on("resize", (width: number, height: number) => {
+  console.log(`Terminal resized to ${width}x${height}`)
+  // Layout updates automatically via Yoga
+})
+```
+
+### Adding Colors
+
+Use different colors for task states:
+
+```typescript
+function updateTaskList() {
+  taskList.setOptions(
+    tasks.map((task) => ({
+      name: task.completed 
+        ? `✓ ${task.name}` 
+        : `○ ${task.name}`,
+      description: task.completed ? "Completed" : "Pending",
+    }))
+  )
+  
+  // Custom rendering with colors
+  taskList.itemColor = (index) => {
+    return tasks[index].completed ? "#00FF00" : "#FFFFFF"
+  }
+}
+```

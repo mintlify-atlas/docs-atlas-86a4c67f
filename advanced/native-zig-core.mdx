@@ -1,0 +1,588 @@
+---
+title: Native Zig Core
+description: Understanding OpenTUI's high-performance Zig core and FFI layer
+---
+
+OpenTUI is built on a high-performance native core written in Zig, providing the foundation for fast terminal rendering and text manipulation. This guide covers the architecture, building from source, and working with the FFI layer.
+
+## Architecture Overview
+
+OpenTUI's architecture consists of three main layers:
+
+```
+┌─────────────────────────────────────┐
+│     TypeScript API Layer            │
+│  (Components, Renderer, UI Logic)   │
+└─────────────────┬───────────────────┘
+                  │
+                  │ FFI (Bun FFI)
+                  │
+┌─────────────────▼───────────────────┐
+│     Native Zig Core                 │
+│  (Rendering, Buffers, Text, UTF-8)  │
+└─────────────────────────────────────┘
+```
+
+### TypeScript Layer
+
+- High-level components and APIs
+- Event handling and state management
+- React/Solid bindings
+- Application logic
+
+### FFI Layer
+
+- Bun's native FFI for zero-overhead calls
+- Type-safe bindings with bun-ffi-structs
+- Efficient data transfer between layers
+
+### Zig Core
+
+- Low-level rendering primitives
+- Optimized buffer management
+- UTF-8 and grapheme processing
+- Text buffer and rope data structures
+- ANSI escape sequence generation
+
+## Core Components
+
+The Zig core provides several key modules:
+
+### Renderer (renderer.zig)
+
+Core rendering engine that manages:
+- Frame buffer operations
+- Diff-based rendering
+- ANSI sequence generation
+- Cursor management
+- Terminal state
+
+### Buffer (buffer.zig)
+
+Optimized buffer management:
+- Zero-copy operations
+- Efficient memory layout
+- Color and attribute storage
+- Character-level manipulation
+
+### Text Buffer (text-buffer.zig)
+
+High-performance text editing:
+- Line-based text storage
+- Efficient insertions/deletions
+- Selection handling
+- Syntax highlighting support
+- Viewport management
+
+### Rope (rope.zig)
+
+Efficient string data structure:
+- Fast insertions at any position
+- Memory-efficient for large texts
+- Supports markers and ranges
+- Used by text buffer internally
+
+### UTF-8 Processing (utf8.zig)
+
+- Unicode grapheme clustering
+- Width calculation (wcwidth)
+- ZWJ (Zero Width Joiner) handling
+- Emoji support
+- East Asian width detection
+
+### Native Span Feed (native-span-feed.zig)
+
+Stream-based rendering:
+- Efficient ANSI processing
+- Chunk-based data flow
+- Zero-copy where possible
+- Async-friendly
+
+## Building from Source
+
+### Prerequisites
+
+**Bun**
+
+Install Bun (JavaScript runtime):
+
+```bash
+curl -fsSL https://bun.sh/install | bash
+```
+
+**Zig**
+
+Install Zig 0.15.2 (exact version required):
+
+```bash
+# macOS
+brew install zig@0.15.2
+
+# Linux - download from ziglang.org
+curl -O https://ziglang.org/download/0.15.2/zig-linux-x86_64-0.15.2.tar.xz
+tar xf zig-linux-x86_64-0.15.2.tar.xz
+export PATH=$PATH:$PWD/zig-linux-x86_64-0.15.2
+
+# Verify version
+zig version  # Should output: 0.15.2
+```
+
+<Warning>
+  OpenTUI requires exactly Zig 0.15.2. Other versions will not work due to language changes.
+</Warning>
+
+### Clone Repository
+
+```bash
+git clone https://github.com/anomalyco/opentui.git
+cd opentui
+bun install
+```
+
+### Build Native Core
+
+Build the Zig native libraries:
+
+```bash
+# Build for native platform
+bun run build
+
+# Or build just the native code
+bun run build:native
+```
+
+This compiles:
+- Native Zig code to shared libraries
+- For your current platform (x64/arm64, Linux/macOS/Windows)
+- Optimized for release by default
+
+### Build for Development
+
+Development builds include debug symbols:
+
+```bash
+bun run build:dev
+```
+
+### Build for All Platforms
+
+Cross-compile for all supported platforms:
+
+```bash
+cd packages/core/src/zig
+zig build -Dall
+```
+
+Supported targets:
+- x86_64-linux
+- aarch64-linux  
+- x86_64-macos (Intel)
+- aarch64-macos (Apple Silicon)
+- x86_64-windows
+- aarch64-windows
+
+### Build Specific Platform
+
+```bash
+cd packages/core/src/zig
+zig build -Dtarget=x86_64-linux
+```
+
+## Build System (build.zig)
+
+OpenTUI uses Zig's build system:
+
+### Build Options
+
+```bash
+# Optimize mode
+zig build -Doptimize=Debug         # Debug build
+zig build -Doptimize=ReleaseSafe   # Optimized with safety
+zig build -Doptimize=ReleaseFast   # Maximum performance
+zig build -Doptimize=ReleaseSmall  # Minimum size
+
+# Benchmark optimize mode
+zig build bench -Dbench-optimize=ReleaseFast
+
+# Use LLVM backend for debug builds
+zig build test -Ddebug-llvm=true
+
+# Enable GPA safety checks
+zig build -Dgpa-safe-stats=true
+```
+
+### Build Steps
+
+```bash
+# Run tests
+zig build test
+
+# Run benchmarks
+zig build bench
+
+# Build benchmark FFI library
+zig build bench-ffi
+
+# Run debug executable
+zig build debug
+```
+
+### Filter Tests
+
+```bash
+# Run specific tests
+zig build test -Dtest-filter="text buffer"
+zig build test -Dtest-filter="utf8"
+```
+
+## TypeScript-Only Changes
+
+<Tip>
+  When changing TypeScript code, you don't need to rebuild! The native core only needs rebuilding when Zig code changes.
+</Tip>
+
+```bash
+# ✅ Just run your app
+bun run src/examples/index.ts
+
+# ❌ No need to rebuild
+# bun run build:native
+```
+
+## FFI Layer
+
+The FFI layer uses Bun's native FFI for calling Zig functions from TypeScript.
+
+### Loading the Library
+
+```typescript
+import { dlopen, FFIType, suffix } from 'bun:ffi'
+import { join } from 'path'
+
+const libPath = join(__dirname, `../lib/libopentui.${suffix}`)
+const lib = dlopen(libPath, {
+  createRenderer: {
+    args: [FFIType.u32, FFIType.u32, FFIType.ptr],
+    returns: FFIType.ptr,
+  },
+  // ... more functions
+})
+```
+
+### FFI Function Signature
+
+```typescript
+interface FFIFunction {
+  args: FFIType[]      // Argument types
+  returns: FFIType     // Return type
+}
+
+// Available FFI types:
+FFIType.void
+FFIType.ptr          // Pointer (void*)
+FFIType.u8           // Unsigned 8-bit
+FFIType.u32          // Unsigned 32-bit  
+FFIType.u64          // Unsigned 64-bit
+FFIType.i32          // Signed 32-bit
+FFIType.f32          // Float 32-bit
+FFIType.bool         // Boolean
+```
+
+### Passing Structures
+
+Use bun-ffi-structs for complex data:
+
+```typescript
+import { createStructTypeDescriptor } from 'bun-ffi-structs'
+
+const RGBAStruct = createStructTypeDescriptor({
+  r: FFIType.f32,
+  g: FFIType.f32,
+  b: FFIType.f32,
+  a: FFIType.f32,
+})
+```
+
+### Calling Native Functions
+
+```typescript
+const rendererPtr = lib.symbols.createRenderer(width, height, optionsPtr)
+const result = lib.symbols.someFunction(rendererPtr, arg1, arg2)
+```
+
+### Memory Management
+
+The native core manages its own memory:
+
+```typescript
+// Create renderer (allocates memory)
+const rendererPtr = lib.symbols.createRenderer(80, 24, null)
+
+// Use renderer
+lib.symbols.render(rendererPtr)
+
+// Destroy renderer (frees memory)
+lib.symbols.destroyRenderer(rendererPtr)
+```
+
+<Warning>
+  Always destroy native objects when done to prevent memory leaks.
+</Warning>
+
+## Development Workflow
+
+### 1. Changing TypeScript Code
+
+```bash
+# Edit TypeScript files
+vim src/renderer.ts
+
+# Run directly - no build needed
+bun run src/examples/index.ts
+```
+
+### 2. Changing Zig Code
+
+```bash
+# Edit Zig files  
+vim src/zig/renderer.zig
+
+# Rebuild native code
+bun run build:native
+
+# Run tests
+cd src/zig
+zig build test
+
+# Run your app
+bun run src/examples/index.ts
+```
+
+### 3. Running Tests
+
+```bash
+# Run all tests (native + TS)
+bun test
+
+# Run only native tests
+bun run test:native
+
+# Run only TypeScript tests  
+bun run test:js
+
+# Filter native tests
+cd src/zig
+zig build test -Dtest-filter="rope"
+```
+
+### 4. Benchmarking
+
+```bash
+# Native benchmarks
+bun run bench:native
+
+# TypeScript benchmarks
+bun run bench:ts
+
+# Specific benchmark
+bun src/benchmark/renderer-benchmark.ts
+```
+
+## Local Development Linking
+
+Link your local OpenTUI to another project:
+
+```bash
+./scripts/link-opentui-dev.sh /path/to/your/project
+```
+
+### Options
+
+```bash
+# Link core only
+./scripts/link-opentui-dev.sh /path/to/project
+
+# Link core + React
+./scripts/link-opentui-dev.sh /path/to/project --react
+
+# Link core + Solid  
+./scripts/link-opentui-dev.sh /path/to/project --solid
+
+# Link built dist directories
+./scripts/link-opentui-dev.sh /path/to/project --dist
+
+# Copy instead of symlink
+./scripts/link-opentui-dev.sh /path/to/project --dist --copy
+
+# Include subdependencies
+./scripts/link-opentui-dev.sh /path/to/project --subdeps
+```
+
+The script links:
+- `@opentui/core`
+- `@opentui/react` or `@opentui/solid` (if specified)
+- Peer dependencies (yoga-layout, react, solid-js, etc.)
+- Subdependencies like `opentui-spinner` (with --subdeps)
+
+## Debugging Native Code
+
+### Enable FFI Debug Logging
+
+```bash
+export OTUI_DEBUG_FFI=true
+export OTUI_TRACE_FFI=true
+```
+
+### Use Debug Build
+
+```bash
+cd packages/core/src/zig
+zig build -Doptimize=Debug
+```
+
+### Debug with LLDB/GDB
+
+```bash
+# Build with debug symbols
+zig build -Doptimize=Debug
+
+# Run under debugger
+lldb -- bun run src/examples/index.ts
+
+# Set breakpoints
+(lldb) breakpoint set --name createRenderer
+(lldb) run
+```
+
+### Memory Debugging
+
+Enable GPA safety checks:
+
+```bash
+zig build -Dgpa-safe-stats=true
+```
+
+This tracks:
+- Memory allocations
+- Leaks
+- Double-frees
+- Use-after-free
+
+## Key Zig Modules
+
+The native core includes:
+
+- **lib.zig** - Main FFI exports
+- **renderer.zig** - Core rendering engine
+- **buffer.zig** - Frame buffer management  
+- **text-buffer.zig** - Text editor buffer
+- **rope.zig** - Rope data structure
+- **utf8.zig** - UTF-8 and grapheme processing
+- **terminal.zig** - Terminal capabilities
+- **ansi.zig** - ANSI escape sequences
+- **grapheme.zig** - Grapheme boundary detection
+- **editor-view.zig** - Editor viewport
+- **edit-buffer.zig** - Edit operations
+- **syntax-style.zig** - Syntax highlighting
+- **event-bus.zig** - Native event system
+- **logger.zig** - Native logging
+- **native-span-feed.zig** - Stream rendering
+
+## Dependencies
+
+The Zig core uses:
+
+- **uucode** - Unicode data (grapheme breaks, widths, emoji)
+- **std** - Zig standard library
+
+Configured in `build.zig.zon`:
+
+```zig
+.dependencies = .{
+    .uucode = .{
+        .url = "https://...",
+        .hash = "...",
+    },
+},
+```
+
+## Performance Considerations
+
+### Zero-Copy Operations
+
+The FFI layer uses pointers to avoid copying:
+
+```typescript
+// Pass pointer to data, not the data itself
+const bufferPtr = getBufferPointer()
+lib.symbols.processBuffer(rendererPtr, bufferPtr, length)
+```
+
+### Batch Operations
+
+Batch FFI calls to reduce overhead:
+
+```typescript
+// ❌ Bad: Multiple FFI calls
+for (const char of text) {
+  lib.symbols.addChar(rendererPtr, char)
+}
+
+// ✅ Good: Single FFI call
+lib.symbols.addText(rendererPtr, textPtr, textLength)
+```
+
+### Memory Pooling
+
+The native core uses memory pools for:
+- Render buffers
+- Text segments  
+- Rope nodes
+- Event objects
+
+## Contributing to Native Core
+
+When contributing Zig code:
+
+1. **Follow style guide**
+   - Use Zig fmt: `zig fmt src/`
+   - Follow existing naming conventions
+   - Add tests for new features
+
+2. **Write tests**
+   ```bash
+   # Add test file
+   src/zig/tests/my-feature_test.zig
+   
+   # Run tests
+   zig build test -Dtest-filter="my feature"
+   ```
+
+3. **Benchmark performance**
+   ```bash
+   # Add benchmark
+   src/zig/bench/my-feature_bench.zig
+   
+   # Run benchmark  
+   zig build bench
+   ```
+
+4. **Update FFI bindings**
+   - Export new functions in lib.zig
+   - Add TypeScript bindings
+   - Update type definitions
+
+5. **Document behavior**
+   - Add comments for public APIs
+   - Update relevant docs
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Performance" href="/advanced/performance" icon="gauge">
+    Learn performance optimization
+  </Card>
+  <Card title="Testing" href="/advanced/testing" icon="flask">
+    Test your TUI applications
+  </Card>
+</CardGroup>

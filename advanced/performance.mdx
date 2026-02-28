@@ -1,0 +1,343 @@
+---
+title: Performance Optimization
+description: Optimize your OpenTUI applications for maximum performance and smooth rendering
+---
+
+OpenTUI is built with performance in mind, featuring a native Zig core that powers efficient terminal rendering. This guide covers performance optimization techniques, benchmarking tools, and FPS targets.
+
+## Performance Architecture
+
+OpenTUI's performance comes from its multi-layered architecture:
+
+- **Native Zig Core** - Low-level rendering operations in Zig for maximum speed
+- **FFI Layer** - Efficient bridge between TypeScript and native code
+- **Optimized Buffers** - Zero-copy buffer management for rendering
+- **Smart Diffing** - Only renders what changed between frames
+
+## FPS Targets
+
+OpenTUI aims for smooth 60 FPS rendering in terminal applications:
+
+```typescript
+const renderer = await createCliRenderer({
+  targetFps: 60, // Default: 60 FPS
+  gatherStats: true, // Enable performance monitoring
+})
+```
+
+### Target Frame Times
+
+- **60 FPS**: 16.67ms per frame (recommended)
+- **30 FPS**: 33.33ms per frame (acceptable for less interactive apps)
+- **120 FPS**: 8.33ms per frame (only for high-performance terminals)
+
+## Built-in Performance Monitoring
+
+### Debug Overlay
+
+Toggle the debug overlay to see real-time performance metrics:
+
+```typescript
+const renderer = await createCliRenderer({
+  gatherStats: true,
+})
+
+// Toggle with backtick key or programmatically
+renderer.toggleDebugOverlay()
+```
+
+The overlay shows:
+- Current FPS
+- Frame time (min/max/average)
+- Render buffer statistics
+- Memory usage
+
+### Programmatic Stats
+
+Access performance stats in your code:
+
+```typescript
+const stats = renderer.getStats()
+
+console.log(`FPS: ${stats.fps}`)
+console.log(`Average frame time: ${stats.averageFrameTime}ms`)
+console.log(`Min frame time: ${stats.minFrameTime}ms`)
+console.log(`Max frame time: ${stats.maxFrameTime}ms`)
+console.log(`Total frames: ${stats.frameCount}`)
+```
+
+### Memory Snapshots
+
+Monitor memory usage over time:
+
+```typescript
+const renderer = await createCliRenderer({
+  memorySnapshotInterval: 1000, // Take snapshot every 1000ms
+})
+
+renderer.on('memory:snapshot', (snapshot) => {
+  console.log(`Heap used: ${snapshot.heapUsed / 1024 / 1024}MB`)
+  console.log(`Heap total: ${snapshot.heapTotal / 1024 / 1024}MB`)
+  console.log(`Array buffers: ${snapshot.arrayBuffers / 1024 / 1024}MB`)
+})
+```
+
+## Benchmarking Tools
+
+OpenTUI includes comprehensive benchmarking utilities for measuring performance.
+
+### Native Benchmarks
+
+Run Zig-level benchmarks to test core operations:
+
+```bash
+cd packages/core
+bun run bench:native
+```
+
+This runs benchmarks for:
+- UTF-8 processing and grapheme clustering
+- Text buffer operations
+- Rope data structure performance
+- Editor view rendering
+- Styled text processing
+
+### TypeScript Benchmarks
+
+Benchmark the FFI layer and JavaScript integration:
+
+```bash
+cd packages/core
+bun run bench:ts
+```
+
+This runs the NativeSpanFeed benchmark suite with different scenarios:
+- **Quick**: Fast smoke test
+- **Default**: Standard benchmark run
+- **Large**: Stress test with large data
+- **All**: Comprehensive benchmark
+
+### Renderer Benchmark
+
+Test 3D rendering performance:
+
+```bash
+bun src/benchmark/renderer-benchmark.ts --duration 10000 --output results.json
+```
+
+Options:
+- `--duration <ms>` - Duration per scenario in milliseconds
+- `--output <path>` - Save results to JSON file
+- `--debug` - Enable debug mode with culling stats
+- `--no-culling` - Disable frustum culling for testing
+
+Benchmarks three scenarios:
+1. **Single Fast Cube** - Baseline rendering performance
+2. **Multiple Moving Cubes** - Multi-object rendering
+3. **Textured Cubes** - Complex material and lighting
+
+## Optimization Techniques
+
+### 1. Minimize Render Updates
+
+Only update components when necessary:
+
+```typescript
+// Bad: Updates every frame
+renderer.setFrameCallback((deltaMs) => {
+  textComponent.content = `Time: ${Date.now()}`
+})
+
+// Good: Update only when needed
+let lastUpdate = 0
+renderer.setFrameCallback((deltaMs) => {
+  const now = Date.now()
+  if (now - lastUpdate > 1000) {
+    textComponent.content = `Time: ${now}`
+    lastUpdate = now
+  }
+})
+```
+
+### 2. Batch Updates
+
+Group related changes together:
+
+```typescript
+// Bad: Multiple separate updates
+text1.content = 'Hello'
+text2.content = 'World'
+text3.content = '!'
+
+// Good: Batch updates in a single callback
+renderer.batchUpdate(() => {
+  text1.content = 'Hello'
+  text2.content = 'World'
+  text3.content = '!'
+})
+```
+
+### 3. Use Z-Index Wisely
+
+Proper z-index ordering reduces unnecessary redraws:
+
+```typescript
+const background = new BoxRenderable(renderer, {
+  zIndex: 0, // Static background
+})
+
+const content = new TextRenderable(renderer, {
+  zIndex: 10, // Main content
+})
+
+const overlay = new BoxRenderable(renderer, {
+  zIndex: 20, // Top-level UI
+})
+```
+
+### 4. Limit Complex Operations
+
+Avoid expensive operations in the render loop:
+
+```typescript
+// Bad: Complex computation every frame
+renderer.setFrameCallback(() => {
+  const result = expensiveCalculation()
+  text.content = result
+})
+
+// Good: Compute asynchronously
+let cachedResult = ''
+setInterval(() => {
+  cachedResult = expensiveCalculation()
+}, 100)
+
+renderer.setFrameCallback(() => {
+  text.content = cachedResult
+})
+```
+
+### 5. Optimize Large Lists
+
+Implement virtual scrolling for large datasets:
+
+```typescript
+const VISIBLE_ITEMS = 20
+let scrollOffset = 0
+
+function renderVisibleItems(items: string[]) {
+  const start = scrollOffset
+  const end = Math.min(start + VISIBLE_ITEMS, items.length)
+  
+  for (let i = start; i < end; i++) {
+    const item = items[i]
+    // Render only visible items
+  }
+}
+```
+
+### 6. Reduce Console Output
+
+Console logging in TUI apps can impact performance:
+
+```bash
+# Disable console capture if not needed
+export OTUI_USE_CONSOLE=false
+```
+
+Or in code:
+
+```typescript
+const renderer = await createCliRenderer({
+  useConsole: false,
+})
+```
+
+## Native Rendering Options
+
+### Alternate Screen Buffer
+
+Use the alternate screen buffer for better performance:
+
+```typescript
+const renderer = await createCliRenderer({
+  useAlternateScreen: true, // Default: true
+})
+```
+
+### Threading
+
+Enable threaded rendering (when supported):
+
+```typescript
+const renderer = await createCliRenderer({
+  useThread: true, // Default: true (disabled on Linux)
+})
+```
+
+<Note>
+  Threading is automatically disabled on Linux due to platform limitations.
+</Note>
+
+## Profiling Tips
+
+### 1. Use Environment Variables
+
+Enable debug modes for profiling:
+
+```bash
+# Show debug overlay at startup
+export OTUI_SHOW_STATS=true
+
+# Enable FFI debugging
+export OTUI_DEBUG_FFI=true
+
+# Trace FFI calls
+export OTUI_TRACE_FFI=true
+```
+
+### 2. Benchmark Custom Code
+
+Create custom benchmarks for your application:
+
+```typescript
+import { performance } from 'perf_hooks'
+
+const start = performance.now()
+// Your code here
+const end = performance.now()
+
+console.log(`Operation took ${end - start}ms`)
+```
+
+### 3. Test on Target Terminals
+
+Performance varies by terminal emulator:
+
+- **Fast**: Kitty, Ghostty, WezTerm, Alacritty
+- **Medium**: iTerm2, Windows Terminal
+- **Slow**: GNOME Terminal, older terminals
+
+## Performance Checklist
+
+- [ ] Enable `gatherStats` during development
+- [ ] Set appropriate `targetFps` for your use case
+- [ ] Minimize unnecessary re-renders
+- [ ] Batch related updates together
+- [ ] Use z-index for proper layering
+- [ ] Avoid heavy computations in render loop
+- [ ] Implement virtual scrolling for large lists
+- [ ] Profile on target terminal emulators
+- [ ] Monitor memory usage over time
+- [ ] Test with production-like data volumes
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Testing" href="/advanced/testing" icon="flask">
+    Learn how to test your TUI applications
+  </Card>
+  <Card title="Native Zig Core" href="/advanced/native-zig-core" icon="code">
+    Understand the native architecture
+  </Card>
+</CardGroup>

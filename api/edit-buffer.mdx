@@ -1,0 +1,760 @@
+---
+title: "EditBuffer"
+description: "An editable text buffer with cursor management, undo/redo, and incremental editing capabilities."
+---
+
+## Overview
+
+The `EditBuffer` class extends `EventEmitter` and provides a complete text editing solution with cursor management, undo/redo history, and grapheme-aware text operations. It's designed for building text editors and interactive text input components.
+
+## Constructor
+
+<ParamField path="lib" type="RenderLib" required>
+  The render library instance.
+</ParamField>
+
+<ParamField path="ptr" type="Pointer" required>
+  Pointer to the native buffer.
+</ParamField>
+
+## Static Methods
+
+### create
+
+Creates a new EditBuffer instance.
+
+```typescript
+static create(widthMethod: WidthMethod): EditBuffer
+```
+
+<ParamField path="widthMethod" type="WidthMethod" required>
+  The width calculation method for character rendering.
+</ParamField>
+
+<ResponseField name="return" type="EditBuffer">
+  A new EditBuffer instance.
+</ResponseField>
+
+## Properties
+
+### id
+
+```typescript
+readonly id: number
+```
+
+<ResponseField name="id" type="number">
+  Unique identifier for this buffer instance.
+</ResponseField>
+
+### ptr
+
+```typescript
+get ptr(): Pointer
+```
+
+<ResponseField name="ptr" type="Pointer">
+  The native pointer to the buffer.
+</ResponseField>
+
+## Text Operations
+
+### setText
+
+Sets text and completely resets the buffer state (clears history).
+
+```typescript
+setText(text: string): void
+```
+
+<ParamField path="text" type="string" required>
+  The text content to set.
+</ParamField>
+
+### setTextOwned
+
+Sets text using owned memory and resets buffer state. Native code takes ownership.
+
+```typescript
+setTextOwned(text: string): void
+```
+
+<ParamField path="text" type="string" required>
+  The text content to set.
+</ParamField>
+
+### replaceText
+
+Replaces text while preserving undo history (creates an undo point).
+
+```typescript
+replaceText(text: string): void
+```
+
+<ParamField path="text" type="string" required>
+  The replacement text content.
+</ParamField>
+
+### replaceTextOwned
+
+Replaces text using owned memory while preserving undo history.
+
+```typescript
+replaceTextOwned(text: string): void
+```
+
+<ParamField path="text" type="string" required>
+  The replacement text content.
+</ParamField>
+
+### getText
+
+Retrieves the current text content.
+
+```typescript
+getText(): string
+```
+
+<ResponseField name="return" type="string">
+  The current text content.
+</ResponseField>
+
+### getTextRange
+
+Retrieves a range of text by character offsets.
+
+```typescript
+getTextRange(startOffset: number, endOffset: number): string
+```
+
+<ParamField path="startOffset" type="number" required>
+  The starting character offset.
+</ParamField>
+
+<ParamField path="endOffset" type="number" required>
+  The ending character offset.
+</ParamField>
+
+<ResponseField name="return" type="string">
+  The text in the specified range.
+</ResponseField>
+
+### getTextRangeByCoords
+
+Retrieves a range of text by line/column coordinates.
+
+```typescript
+getTextRangeByCoords(
+  startRow: number,
+  startCol: number,
+  endRow: number,
+  endCol: number
+): string
+```
+
+<ParamField path="startRow" type="number" required>
+  The starting row (0-based).
+</ParamField>
+
+<ParamField path="startCol" type="number" required>
+  The starting column (0-based).
+</ParamField>
+
+<ParamField path="endRow" type="number" required>
+  The ending row (0-based).
+</ParamField>
+
+<ParamField path="endCol" type="number" required>
+  The ending column (0-based).
+</ParamField>
+
+<ResponseField name="return" type="string">
+  The text in the specified range.
+</ResponseField>
+
+### getLineCount
+
+Gets the number of lines in the buffer.
+
+```typescript
+getLineCount(): number
+```
+
+<ResponseField name="return" type="number">
+  The number of lines.
+</ResponseField>
+
+## Editing Operations
+
+### insertChar
+
+Inserts a character at the current cursor position.
+
+```typescript
+insertChar(char: string): void
+```
+
+<ParamField path="char" type="string" required>
+  The character to insert.
+</ParamField>
+
+### insertText
+
+Inserts text at the current cursor position.
+
+```typescript
+insertText(text: string): void
+```
+
+<ParamField path="text" type="string" required>
+  The text to insert.
+</ParamField>
+
+### deleteChar
+
+Deletes the character at the cursor position (forward delete).
+
+```typescript
+deleteChar(): void
+```
+
+### deleteCharBackward
+
+Deletes the character before the cursor position (backspace).
+
+```typescript
+deleteCharBackward(): void
+```
+
+### deleteRange
+
+Deletes a range of text by coordinates.
+
+```typescript
+deleteRange(
+  startLine: number,
+  startCol: number,
+  endLine: number,
+  endCol: number
+): void
+```
+
+<ParamField path="startLine" type="number" required>
+  The starting line (0-based).
+</ParamField>
+
+<ParamField path="startCol" type="number" required>
+  The starting column (0-based).
+</ParamField>
+
+<ParamField path="endLine" type="number" required>
+  The ending line (0-based).
+</ParamField>
+
+<ParamField path="endCol" type="number" required>
+  The ending column (0-based).
+</ParamField>
+
+### newLine
+
+Inserts a new line at the cursor position.
+
+```typescript
+newLine(): void
+```
+
+### deleteLine
+
+Deletes the current line.
+
+```typescript
+deleteLine(): void
+```
+
+## Cursor Operations
+
+### getCursorPosition
+
+Gets the current cursor position.
+
+```typescript
+getCursorPosition(): LogicalCursor
+```
+
+<ResponseField name="return" type="LogicalCursor">
+  Object containing row, col, and offset properties.
+</ResponseField>
+
+### setCursor
+
+Sets the cursor to a specific line and column.
+
+```typescript
+setCursor(line: number, col: number): void
+```
+
+<ParamField path="line" type="number" required>
+  The line number (0-based).
+</ParamField>
+
+<ParamField path="col" type="number" required>
+  The column number (0-based).
+</ParamField>
+
+### setCursorToLineCol
+
+Sets the cursor to a specific line and column.
+
+```typescript
+setCursorToLineCol(line: number, col: number): void
+```
+
+<ParamField path="line" type="number" required>
+  The line number (0-based).
+</ParamField>
+
+<ParamField path="col" type="number" required>
+  The column number (0-based).
+</ParamField>
+
+### setCursorByOffset
+
+Sets the cursor by character offset.
+
+```typescript
+setCursorByOffset(offset: number): void
+```
+
+<ParamField path="offset" type="number" required>
+  The character offset (0-based).
+</ParamField>
+
+### moveCursorLeft
+
+Moves the cursor one grapheme left.
+
+```typescript
+moveCursorLeft(): void
+```
+
+### moveCursorRight
+
+Moves the cursor one grapheme right.
+
+```typescript
+moveCursorRight(): void
+```
+
+### moveCursorUp
+
+Moves the cursor one line up.
+
+```typescript
+moveCursorUp(): void
+```
+
+### moveCursorDown
+
+Moves the cursor one line down.
+
+```typescript
+moveCursorDown(): void
+```
+
+### gotoLine
+
+Moves the cursor to the start of a specific line.
+
+```typescript
+gotoLine(line: number): void
+```
+
+<ParamField path="line" type="number" required>
+  The line number (0-based).
+</ParamField>
+
+### getNextWordBoundary
+
+Finds the next word boundary from the cursor.
+
+```typescript
+getNextWordBoundary(): LogicalCursor
+```
+
+<ResponseField name="return" type="LogicalCursor">
+  The position of the next word boundary.
+</ResponseField>
+
+### getPrevWordBoundary
+
+Finds the previous word boundary from the cursor.
+
+```typescript
+getPrevWordBoundary(): LogicalCursor
+```
+
+<ResponseField name="return" type="LogicalCursor">
+  The position of the previous word boundary.
+</ResponseField>
+
+### getEOL
+
+Gets the end-of-line position for the current line.
+
+```typescript
+getEOL(): LogicalCursor
+```
+
+<ResponseField name="return" type="LogicalCursor">
+  The end-of-line position.
+</ResponseField>
+
+## Position Conversion
+
+### offsetToPosition
+
+Converts a character offset to a line/column position.
+
+```typescript
+offsetToPosition(offset: number): { row: number; col: number } | null
+```
+
+<ParamField path="offset" type="number" required>
+  The character offset.
+</ParamField>
+
+<ResponseField name="return" type="{ row: number; col: number } | null">
+  The row/column position or null if invalid offset.
+</ResponseField>
+
+### positionToOffset
+
+Converts a line/column position to a character offset.
+
+```typescript
+positionToOffset(row: number, col: number): number
+```
+
+<ParamField path="row" type="number" required>
+  The row number (0-based).
+</ParamField>
+
+<ParamField path="col" type="number" required>
+  The column number (0-based).
+</ParamField>
+
+<ResponseField name="return" type="number">
+  The character offset.
+</ResponseField>
+
+### getLineStartOffset
+
+Gets the character offset of the start of a line.
+
+```typescript
+getLineStartOffset(row: number): number
+```
+
+<ParamField path="row" type="number" required>
+  The row number (0-based).
+</ParamField>
+
+<ResponseField name="return" type="number">
+  The character offset of the line start.
+</ResponseField>
+
+## Undo/Redo
+
+### undo
+
+Undoes the last edit operation.
+
+```typescript
+undo(): string | null
+```
+
+<ResponseField name="return" type="string | null">
+  Metadata about the undo operation or null if nothing to undo.
+</ResponseField>
+
+### redo
+
+Redoes the last undone operation.
+
+```typescript
+redo(): string | null
+```
+
+<ResponseField name="return" type="string | null">
+  Metadata about the redo operation or null if nothing to redo.
+</ResponseField>
+
+### canUndo
+
+Checks if there are operations available to undo.
+
+```typescript
+canUndo(): boolean
+```
+
+<ResponseField name="return" type="boolean">
+  True if undo is available.
+</ResponseField>
+
+### canRedo
+
+Checks if there are operations available to redo.
+
+```typescript
+canRedo(): boolean
+```
+
+<ResponseField name="return" type="boolean">
+  True if redo is available.
+</ResponseField>
+
+### clearHistory
+
+Clears the entire undo/redo history.
+
+```typescript
+clearHistory(): void
+```
+
+## Styling
+
+### setDefaultFg
+
+Sets the default foreground color.
+
+```typescript
+setDefaultFg(fg: RGBA | null): void
+```
+
+<ParamField path="fg" type="RGBA | null" required>
+  The foreground color or null to clear.
+</ParamField>
+
+### setDefaultBg
+
+Sets the default background color.
+
+```typescript
+setDefaultBg(bg: RGBA | null): void
+```
+
+<ParamField path="bg" type="RGBA | null" required>
+  The background color or null to clear.
+</ParamField>
+
+### setDefaultAttributes
+
+Sets default text attributes (bold, italic, etc.).
+
+```typescript
+setDefaultAttributes(attributes: number | null): void
+```
+
+<ParamField path="attributes" type="number | null" required>
+  Bitfield of text attributes or null to clear.
+</ParamField>
+
+### resetDefaults
+
+Resets all default styling to original values.
+
+```typescript
+resetDefaults(): void
+```
+
+### setSyntaxStyle
+
+Sets the syntax highlighting style.
+
+```typescript
+setSyntaxStyle(style: SyntaxStyle | null): void
+```
+
+<ParamField path="style" type="SyntaxStyle | null" required>
+  The syntax style or null to disable.
+</ParamField>
+
+### getSyntaxStyle
+
+Gets the current syntax highlighting style.
+
+```typescript
+getSyntaxStyle(): SyntaxStyle | null
+```
+
+<ResponseField name="return" type="SyntaxStyle | null">
+  The current syntax style or null if none is set.
+</ResponseField>
+
+## Highlights
+
+### addHighlight
+
+Adds a highlight to a specific line by column positions.
+
+```typescript
+addHighlight(lineIdx: number, highlight: Highlight): void
+```
+
+<ParamField path="lineIdx" type="number" required>
+  The line index (0-based).
+</ParamField>
+
+<ParamField path="highlight" type="Highlight" required>
+  The highlight definition with start/end columns.
+</ParamField>
+
+### addHighlightByCharRange
+
+Adds a highlight using absolute character offsets.
+
+```typescript
+addHighlightByCharRange(highlight: Highlight): void
+```
+
+<ParamField path="highlight" type="Highlight" required>
+  The highlight definition with start/end character offsets.
+</ParamField>
+
+### removeHighlightsByRef
+
+Removes all highlights with a specific reference ID.
+
+```typescript
+removeHighlightsByRef(hlRef: number): void
+```
+
+<ParamField path="hlRef" type="number" required>
+  The highlight reference ID.
+</ParamField>
+
+### clearLineHighlights
+
+Clears all highlights on a specific line.
+
+```typescript
+clearLineHighlights(lineIdx: number): void
+```
+
+<ParamField path="lineIdx" type="number" required>
+  The line index (0-based).
+</ParamField>
+
+### clearAllHighlights
+
+Removes all highlights from the buffer.
+
+```typescript
+clearAllHighlights(): void
+```
+
+### getLineHighlights
+
+Retrieves all highlights for a specific line.
+
+```typescript
+getLineHighlights(lineIdx: number): Array<Highlight>
+```
+
+<ParamField path="lineIdx" type="number" required>
+  The line index (0-based).
+</ParamField>
+
+<ResponseField name="return" type="Array<Highlight>">
+  Array of highlights on the line.
+</ResponseField>
+
+## Memory Management
+
+### clear
+
+Clears the buffer content.
+
+```typescript
+clear(): void
+```
+
+### destroy
+
+Destroys the buffer and frees native resources.
+
+```typescript
+destroy(): void
+```
+
+### debugLogRope
+
+Logs the internal rope data structure for debugging.
+
+```typescript
+debugLogRope(): void
+```
+
+## Types
+
+### LogicalCursor
+
+```typescript
+interface LogicalCursor {
+  row: number
+  col: number
+  offset: number
+}
+```
+
+<ParamField path="row" type="number" required>
+  The row position (0-based).
+</ParamField>
+
+<ParamField path="col" type="number" required>
+  The column position (0-based).
+</ParamField>
+
+<ParamField path="offset" type="number" required>
+  The character offset from start of buffer.
+</ParamField>
+
+## Events
+
+EditBuffer extends EventEmitter and emits native events. Events are prefixed with `eb_` internally but exposed without the prefix.
+
+## Example
+
+```typescript
+import { EditBuffer } from "@opentui/core"
+
+// Create an edit buffer
+const buffer = EditBuffer.create("wcwidth")
+
+// Set initial text
+buffer.setText("Hello, World!")
+
+// Insert text at cursor
+buffer.insertText(" Welcome to OpenTUI.")
+
+// Move cursor
+buffer.moveCursorLeft()
+buffer.moveCursorUp()
+
+// Get cursor position
+const pos = buffer.getCursorPosition()
+console.log(`Cursor at ${pos.row}:${pos.col}`)
+
+// Undo and redo
+buffer.undo()
+if (buffer.canRedo()) {
+  buffer.redo()
+}
+
+// Get text
+const text = buffer.getText()
+console.log(text)
+
+// Clean up
+buffer.destroy()
+```

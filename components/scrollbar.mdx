@@ -1,0 +1,252 @@
+---
+title: ScrollBar
+description: A scrollbar component with customizable track, arrows, and keyboard navigation support
+---
+
+The `ScrollBarRenderable` provides visual scroll indicators with support for both vertical and horizontal orientations. It includes an interactive slider track and optional arrow buttons for navigation.
+
+## Import
+
+```typescript
+import { ScrollBarRenderable } from "@opentui/core"
+```
+
+## Basic Usage
+
+```typescript
+const scrollbar = new ScrollBarRenderable(ctx, {
+  orientation: "vertical",
+  showArrows: true,
+  scrollSize: 1000,
+  viewportSize: 100,
+  scrollPosition: 0,
+  onChange: (position) => {
+    console.log("Scrolled to:", position)
+  }
+})
+```
+
+## Scroll Properties
+
+The scrollbar manages three key dimensions:
+
+<ParamField path="scrollSize" type="number">
+  Total size of the scrollable content. For vertical scrollbars, this is the total height of content. For horizontal scrollbars, this is the total width.
+</ParamField>
+
+<ParamField path="viewportSize" type="number">
+  Size of the visible viewport. Determines the thumb size on the slider.
+</ParamField>
+
+<ParamField path="scrollPosition" type="number">
+  Current scroll position (0 to scrollSize - viewportSize). Automatically clamped to valid range.
+</ParamField>
+
+## Props
+
+<ParamField path="orientation" type="'vertical' | 'horizontal'" required>
+  Direction of the scrollbar. Controls layout and keyboard navigation.
+</ParamField>
+
+<ParamField path="showArrows" type="boolean" default="false">
+  Whether to show arrow buttons at the start and end of the scrollbar for navigation.
+</ParamField>
+
+<ParamField path="arrowOptions" type="Omit<ArrowOptions, 'direction'>">
+  Styling options for arrow buttons:
+  - `foregroundColor` - Color of the arrow character
+  - `backgroundColor` - Background color of the arrow button
+  - `attributes` - Text attributes (bold, underline, etc.)
+  - `arrowChars` - Custom characters for arrows (up, down, left, right)
+</ParamField>
+
+<ParamField path="trackOptions" type="Partial<SliderOptions>">
+  Options passed to the internal slider component. See [Slider](/components/slider) documentation for available options.
+</ParamField>
+
+<ParamField path="onChange" type="(position: number) => void">
+  Callback fired when scroll position changes through user interaction.
+</ParamField>
+
+<ParamField path="scrollStep" type="number | null" default="null">
+  Custom step size for "step" unit scrolling. Defaults to 1 if not set.
+</ParamField>
+
+## Methods
+
+### scrollBy()
+
+Scroll by a delta amount with different units:
+
+```typescript
+// Scroll by absolute pixels
+scrollbar.scrollBy(50, "absolute")
+
+// Scroll by viewport percentage
+scrollbar.scrollBy(0.5, "viewport") // Scroll half a viewport
+
+// Scroll by content percentage
+scrollbar.scrollBy(0.1, "content") // Scroll 10% of total content
+
+// Scroll by custom steps
+scrollbar.scrollStep = 20
+scrollbar.scrollBy(2, "step") // Scroll 40 pixels
+```
+
+**Parameters:**
+- `delta` (number) - Amount to scroll (can be negative)
+- `unit` (ScrollUnit) - One of:
+  - `"absolute"` - Scroll by exact pixels (default)
+  - `"viewport"` - Multiply delta by viewport size
+  - `"content"` - Multiply delta by total content size
+  - `"step"` - Multiply delta by scrollStep value
+
+### resetVisibilityControl()
+
+Reset automatic visibility behavior. By default, the scrollbar hides when content fits in viewport.
+
+```typescript
+scrollbar.visible = true // Manual override
+scrollbar.resetVisibilityControl() // Return to automatic
+```
+
+## Keyboard Navigation
+
+The scrollbar responds to keyboard events when focused:
+
+| Key | Action |
+|-----|--------|
+| `↑` / `k` | Scroll up (vertical) by 20% of viewport |
+| `↓` / `j` | Scroll down (vertical) by 20% of viewport |
+| `←` / `h` | Scroll left (horizontal) by 20% of viewport |
+| `→` / `l` | Scroll right (horizontal) by 20% of viewport |
+| `PageUp` | Scroll backward by 50% of viewport |
+| `PageDown` | Scroll forward by 50% of viewport |
+| `Home` | Scroll to start |
+| `End` | Scroll to end |
+
+## Examples
+
+### Vertical Scrollbar with Arrows
+
+```typescript
+const scrollbar = new ScrollBarRenderable(ctx, {
+  orientation: "vertical",
+  showArrows: true,
+  arrowOptions: {
+    foregroundColor: "#ffffff",
+    backgroundColor: "#333333",
+  },
+  trackOptions: {
+    thumbColor: "#666666",
+    trackColor: "#222222",
+  },
+  onChange: (position) => {
+    // Sync with scrollable content
+    contentView.scrollY = position
+  }
+})
+
+// Set scroll dimensions
+scrollbar.scrollSize = 1000 // Total content height
+scrollbar.viewportSize = 200 // Visible area height
+scrollbar.scrollPosition = 0 // Start at top
+```
+
+### Horizontal Scrollbar
+
+```typescript
+const hScrollbar = new ScrollBarRenderable(ctx, {
+  orientation: "horizontal",
+  showArrows: false,
+  scrollSize: 500, // Total content width
+  viewportSize: 100, // Visible width
+  onChange: (position) => {
+    contentView.scrollX = position
+  }
+})
+
+// Position at bottom of container
+hScrollbar.alignSelf = "end"
+hScrollbar.height = 1
+```
+
+### Auto-hiding Scrollbar
+
+```typescript
+const scrollbar = new ScrollBarRenderable(ctx, {
+  orientation: "vertical",
+  showArrows: false
+})
+
+// Scrollbar automatically shows/hides based on content
+scrollbar.scrollSize = 100
+scrollbar.viewportSize = 100
+// scrollbar.visible === false (content fits)
+
+scrollbar.scrollSize = 200
+// scrollbar.visible === true (content overflows)
+```
+
+### Custom Scroll Steps
+
+```typescript
+const scrollbar = new ScrollBarRenderable(ctx, {
+  orientation: "vertical",
+  showArrows: true
+})
+
+// Set custom step size for line-based scrolling
+scrollbar.scrollStep = 24 // One line of text
+
+// Click arrows or use keyboard to scroll by steps
+scrollbar.scrollBy(1, "step") // Scroll one line
+scrollbar.scrollBy(-3, "step") // Scroll back three lines
+```
+
+## Child Components
+
+The ScrollBarRenderable contains three child components:
+
+### slider
+
+A `SliderRenderable` instance that provides the draggable thumb and track.
+
+```typescript
+scrollbar.slider.thumbColor = "#00ff00"
+scrollbar.slider.trackColor = "#003300"
+```
+
+See [Slider](/components/slider) for full slider API.
+
+### startArrow / endArrow
+
+Arrow buttons for navigation (up/left and down/right).
+
+```typescript
+scrollbar.startArrow.foregroundColor = "#ffffff"
+scrollbar.endArrow.backgroundColor = "#444444"
+```
+
+## Events
+
+<ParamField path="change" type="{ position: number }">
+  Fired when scroll position changes through user interaction (dragging slider, clicking arrows, or keyboard navigation).
+</ParamField>
+
+```typescript
+scrollbar.on("change", ({ position }) => {
+  console.log("New position:", position)
+})
+```
+
+## Notes
+
+- The scrollbar automatically hides when `scrollSize <= viewportSize` unless visibility is manually controlled
+- Scroll position is automatically clamped to valid range `[0, scrollSize - viewportSize]`
+- Mouse interactions on arrows include hold-to-repeat behavior
+- The component is focusable by default for keyboard navigation
+
+## Source
+
+View the full source code at `packages/core/src/renderables/ScrollBar.ts:19`

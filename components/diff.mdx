@@ -1,0 +1,442 @@
+---
+title: Diff
+description: Display unified or split diff views with syntax highlighting, line numbers, and customizable styling
+---
+
+## Overview
+
+The `DiffRenderable` component displays git-style diffs with syntax highlighting, line numbers, and support for both unified and split view modes. It parses standard unified diff format and provides rich styling options.
+
+## Basic Usage
+
+```typescript
+import { DiffRenderable, SyntaxStyle } from "@opentui/core"
+
+const diff = `--- a/calculator.ts
++++ b/calculator.ts
+@@ -1,13 +1,20 @@
+ class Calculator {
+   add(a: number, b: number): number {
+     return a + b;
+   }
+ 
+-  subtract(a: number, b: number): number {
+-    return a - b;
++  subtract(a: number, b: number, c: number = 0): number {
++    return a - b - c;
+   }
+ }`
+
+const diffView = new DiffRenderable(renderer, {
+  diff,
+  view: "unified",
+  filetype: "typescript",
+  syntaxStyle,
+})
+```
+
+## Props
+
+<ParamField path="diff" type="string" default="''">
+  Unified diff content in standard git diff format.
+</ParamField>
+
+<ParamField path="view" type="'unified' | 'split'" default="'unified'">
+  Diff view mode:
+  - `'unified'`: Single pane with +/- indicators
+  - `'split'`: Side-by-side comparison
+</ParamField>
+
+<ParamField path="filetype" type="string">
+  Language/filetype for syntax highlighting (e.g., `"typescript"`, `"python"`).
+</ParamField>
+
+<ParamField path="syntaxStyle" type="SyntaxStyle">
+  Syntax styling configuration for code highlighting.
+</ParamField>
+
+<ParamField path="showLineNumbers" type="boolean" default="true">
+  Show line numbers in the gutter.
+</ParamField>
+
+<ParamField path="wrapMode" type="'none' | 'char' | 'word'">
+  Text wrapping behavior.
+</ParamField>
+
+<ParamField path="conceal" type="boolean" default="false">
+  Enable concealment of hidden syntax elements.
+</ParamField>
+
+<ParamField path="treeSitterClient" type="TreeSitterClient">
+  Tree-sitter client for syntax parsing.
+</ParamField>
+
+### Color Customization
+
+<ParamField path="fg" type="string | RGBA">
+  Default foreground color.
+</ParamField>
+
+<ParamField path="addedBg" type="string | RGBA" default="'#1a4d1a'">
+  Background color for added lines (gutter).
+</ParamField>
+
+<ParamField path="removedBg" type="string | RGBA" default="'#4d1a1a'">
+  Background color for removed lines (gutter).
+</ParamField>
+
+<ParamField path="contextBg" type="string | RGBA" default="'transparent'">
+  Background color for unchanged context lines (gutter).
+</ParamField>
+
+<ParamField path="addedContentBg" type="string | RGBA">
+  Background color for added line content. Falls back to `addedBg` if not specified.
+</ParamField>
+
+<ParamField path="removedContentBg" type="string | RGBA">
+  Background color for removed line content. Falls back to `removedBg` if not specified.
+</ParamField>
+
+<ParamField path="contextContentBg" type="string | RGBA">
+  Background color for context line content. Falls back to `contextBg` if not specified.
+</ParamField>
+
+<ParamField path="addedSignColor" type="string | RGBA" default="'#22c55e'">
+  Color for the "+" sign on added lines.
+</ParamField>
+
+<ParamField path="removedSignColor" type="string | RGBA" default="'#ef4444'">
+  Color for the "-" sign on removed lines.
+</ParamField>
+
+<ParamField path="lineNumberFg" type="string | RGBA" default="'#888888'">
+  Foreground color for line numbers.
+</ParamField>
+
+<ParamField path="lineNumberBg" type="string | RGBA" default="'transparent'">
+  Background color for the line number gutter.
+</ParamField>
+
+<ParamField path="addedLineNumberBg" type="string | RGBA" default="'transparent'">
+  Background color for line numbers on added lines.
+</ParamField>
+
+<ParamField path="removedLineNumberBg" type="string | RGBA" default="'transparent'">
+  Background color for line numbers on removed lines.
+</ParamField>
+
+<ParamField path="selectionBg" type="string | RGBA">
+  Background color for selected text.
+</ParamField>
+
+<ParamField path="selectionFg" type="string | RGBA">
+  Foreground color for selected text.
+</ParamField>
+
+## View Modes
+
+### Unified View
+
+Displays changes in a single column with `+` for additions and `-` for removals:
+
+```
+ 1  class Calculator {
+ 2    add(a: number, b: number): number {
+ 3      return a + b;
+-4    subtract(a: number, b: number): number {
+-5      return a - b;
++4    subtract(a: number, b: number, c: number = 0): number {
++5      return a - b - c;
+```
+
+### Split View
+
+Displays before and after side-by-side:
+
+```
+Before                          After
+4  subtract(a, b) {       |  4  subtract(a, b, c = 0) {
+5    return a - b;        |  5    return a - b - c;
+```
+
+## Examples
+
+### GitHub Dark Theme
+
+```typescript
+const syntaxStyle = SyntaxStyle.fromStyles({
+  keyword: { fg: parseColor("#FF7B72"), bold: true },
+  string: { fg: parseColor("#A5D6FF") },
+  comment: { fg: parseColor("#8B949E"), italic: true },
+  function: { fg: parseColor("#D2A8FF") },
+  default: { fg: parseColor("#E6EDF3") },
+})
+
+const diffView = new DiffRenderable(renderer, {
+  diff: diffContent,
+  view: "unified",
+  filetype: "typescript",
+  syntaxStyle,
+  addedBg: "#1a4d1a",
+  removedBg: "#4d1a1a",
+  addedSignColor: "#22c55e",
+  removedSignColor: "#ef4444",
+  lineNumberFg: "#6b7280",
+  lineNumberBg: "#161b22",
+})
+```
+
+### Split View
+
+```typescript
+const diffView = new DiffRenderable(renderer, {
+  diff: diffContent,
+  view: "split",
+  filetype: "typescript",
+  syntaxStyle,
+  wrapMode: "word",
+  width: "100%",
+})
+```
+
+### Toggle View Mode
+
+```typescript
+const diffView = new DiffRenderable(renderer, {
+  diff: diffContent,
+  view: "unified",
+  filetype: "typescript",
+  syntaxStyle,
+})
+
+renderer.keyInput.on("keypress", (key) => {
+  if (key.name === "v") {
+    diffView.view = diffView.view === "unified" ? "split" : "unified"
+  }
+})
+```
+
+### Custom Color Scheme (Monokai)
+
+```typescript
+const diffView = new DiffRenderable(renderer, {
+  diff: diffContent,
+  view: "unified",
+  filetype: "typescript",
+  syntaxStyle: monokaiStyle,
+  addedBg: "#2d4a2b",
+  removedBg: "#4a2b2b",
+  contextBg: "transparent",
+  addedSignColor: "#A6E22E",
+  removedSignColor: "#F92672",
+  lineNumberFg: "#75715E",
+  lineNumberBg: "#1e1f1c",
+})
+```
+
+### Without Line Numbers
+
+```typescript
+const diffView = new DiffRenderable(renderer, {
+  diff: diffContent,
+  view: "unified",
+  filetype: "typescript",
+  syntaxStyle,
+  showLineNumbers: false,
+})
+```
+
+### With Word Wrapping
+
+```typescript
+const diffView = new DiffRenderable(renderer, {
+  diff: diffContent,
+  view: "split",
+  filetype: "typescript",
+  syntaxStyle,
+  wrapMode: "word",
+})
+```
+
+### Real Git Diff
+
+```typescript
+import { exec } from "child_process"
+import { promisify } from "util"
+
+const execAsync = promisify(exec)
+
+// Get git diff
+const { stdout: diff } = await execAsync("git diff HEAD~1 HEAD -- src/file.ts")
+
+const diffView = new DiffRenderable(renderer, {
+  diff,
+  view: "split",
+  filetype: "typescript",
+  syntaxStyle,
+})
+```
+
+## Methods
+
+### setLineColor()
+
+Set custom color for a specific line.
+
+```typescript
+diffView.setLineColor(5, "#ff0000")
+```
+
+### clearLineColor()
+
+Clear custom color for a line.
+
+```typescript
+diffView.clearLineColor(5)
+```
+
+### setLineColors()
+
+Set multiple line colors at once.
+
+```typescript
+const colors = new Map([
+  [3, "#ff0000"],
+  [5, "#00ff00"],
+])
+diffView.setLineColors(colors)
+```
+
+### highlightLines()
+
+Highlight a range of lines.
+
+```typescript
+diffView.highlightLines(10, 15, "#ff00ff")
+```
+
+### clearHighlightLines()
+
+Clear highlighting for a range.
+
+```typescript
+diffView.clearHighlightLines(10, 15)
+```
+
+### clearAllLineColors()
+
+Clear all custom line colors.
+
+```typescript
+diffView.clearAllLineColors()
+```
+
+## Properties
+
+### diff
+
+Get or set the diff content.
+
+```typescript
+diffView.diff = newDiffContent
+const current = diffView.diff
+```
+
+### view
+
+Get or set the view mode.
+
+```typescript
+diffView.view = "split"
+```
+
+### filetype
+
+Get or set the language for syntax highlighting.
+
+```typescript
+diffView.filetype = "python"
+```
+
+### syntaxStyle
+
+Get or set the syntax style.
+
+```typescript
+diffView.syntaxStyle = newSyntaxStyle
+```
+
+### wrapMode
+
+Get or set the wrap mode.
+
+```typescript
+diffView.wrapMode = "word"
+```
+
+### showLineNumbers
+
+Get or set line number visibility.
+
+```typescript
+diffView.showLineNumbers = false
+```
+
+### Color Properties
+
+All color properties can be read and written:
+
+```typescript
+diffView.addedBg = "#1a4d1a"
+diffView.removedBg = "#4d1a1a"
+diffView.addedSignColor = "#22c55e"
+diffView.removedSignColor = "#ef4444"
+diffView.lineNumberFg = "#6b7280"
+// ... and more
+```
+
+## Diff Format
+
+DiffRenderable expects standard unified diff format:
+
+```diff
+--- a/file.ts
++++ b/file.ts
+@@ -1,5 +1,6 @@
+ context line
+-removed line
++added line
+ context line
+```
+
+You can generate this format using:
+- `git diff`
+- `diff -u file1 file2`
+- JavaScript diff libraries like `diff` package
+
+## Error Handling
+
+If the diff cannot be parsed, DiffRenderable displays an error message and falls back to showing the raw diff as syntax-highlighted code:
+
+```typescript
+// Invalid diff format
+const diffView = new DiffRenderable(renderer, {
+  diff: "invalid diff content",
+  filetype: "diff",
+  syntaxStyle,
+})
+// Shows: "Error parsing diff: [error message]" followed by the raw content
+```
+
+## Performance
+
+- Efficient diff parsing with the `diff` package
+- Smart content alignment in split view for wrapped lines
+- Minimal re-rendering when toggling styles
+- Handles large diffs with good performance
+
+## Related Components
+
+- [Code](/components/code) - Syntax-highlighted code display (used internally)
+- [LineNumberRenderable](/components/linenumber) - Line number gutter (used internally)
+- [Text](/components/text) - Plain text display

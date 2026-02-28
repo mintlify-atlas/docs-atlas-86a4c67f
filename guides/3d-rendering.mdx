@@ -1,0 +1,604 @@
+---
+title: 3D Rendering with WebGPU
+description: Render 3D graphics in the terminal using OpenTUI's Three.js integration and WebGPU
+---
+
+OpenTUI supports advanced 3D rendering in the terminal using Three.js and WebGPU. Render meshes, lights, shaders, and post-processing effects directly in your TUI.
+
+<Note>
+  3D rendering requires WebGPU support. Make sure you're running on a system with WebGPU available (most modern systems support this through Dawn/wgpu).
+</Note>
+
+## Quick Start
+
+Render a simple 3D cube:
+
+```typescript
+import {
+  createCliRenderer,
+  FrameBufferRenderable,
+  ThreeCliRenderer,
+} from "@opentui/core"
+import {
+  Scene,
+  PerspectiveCamera,
+  Mesh,
+  BoxGeometry,
+  MeshPhongMaterial,
+  DirectionalLight,
+  AmbientLight,
+} from "three"
+
+const renderer = await createCliRenderer()
+renderer.start()
+
+// Create framebuffer for 3D rendering
+const framebuffer = new FrameBufferRenderable(renderer, {
+  id: "3d-canvas",
+  width: 80,
+  height: 40,
+  respectAlpha: true,
+})
+renderer.root.add(framebuffer)
+
+// Create Three.js scene
+const scene = new Scene()
+const camera = new PerspectiveCamera(45, 80 / 40, 0.1, 100)
+camera.position.z = 3
+
+// Add cube
+const geometry = new BoxGeometry(1, 1, 1)
+const material = new MeshPhongMaterial({ color: 0x3b82f6 })
+const cube = new Mesh(geometry, material)
+scene.add(cube)
+
+// Add lights
+const ambientLight = new AmbientLight(0xffffff, 0.5)
+scene.add(ambientLight)
+
+const directionalLight = new DirectionalLight(0xffffff, 1.0)
+directionalLight.position.set(5, 5, 5)
+scene.add(directionalLight)
+
+// Create 3D renderer
+const engine = new ThreeCliRenderer(renderer, {
+  width: 80,
+  height: 40,
+  scene,
+  camera,
+})
+
+// Render loop
+renderer.setFrameCallback(async (deltaTime) => {
+  // Rotate cube
+  cube.rotation.x += 0.01
+  cube.rotation.y += 0.02
+  
+  // Render 3D scene to framebuffer
+  await engine.render(framebuffer.frameBuffer, deltaTime)
+})
+```
+
+## ThreeCliRenderer
+
+The `ThreeCliRenderer` bridges Three.js with OpenTUI's terminal rendering.
+
+### Configuration
+
+```typescript
+import { ThreeCliRenderer } from "@opentui/core"
+import { Scene, PerspectiveCamera } from "three"
+
+const scene = new Scene()
+const camera = new PerspectiveCamera(45, 2, 0.1, 100)
+
+const engine = new ThreeCliRenderer(renderer, {
+  width: 100,           // Render width in cells
+  height: 50,           // Render height in cells
+  scene,                // Three.js scene
+  camera,               // Three.js camera
+  pixelRatio: 1,        // Pixel density (default: 1)
+  antialias: true,      // Enable antialiasing (default: true)
+})
+```
+
+### Rendering
+
+```typescript
+import { OptimizedBuffer } from "@opentui/core"
+
+// Render to a buffer
+await engine.render(framebuffer.frameBuffer, deltaTime)
+
+// Or get raw pixel data
+const pixelData = await engine.renderToPixelData()
+```
+
+## Materials and Lighting
+
+### Material Types
+
+<Tabs>
+  <Tab title="MeshPhongMaterial">
+    ```typescript
+    import { MeshPhongMaterial, Color } from "three"
+    
+    const material = new MeshPhongMaterial({
+      color: 0x3b82f6,       // Base color
+      emissive: 0x000000,    // Emissive (glow) color
+      specular: 0x111111,    // Specular highlight color
+      shininess: 30,         // Shininess (0-100)
+      transparent: false,
+      opacity: 1.0,
+    })
+    ```
+  </Tab>
+  
+  <Tab title="MeshBasicMaterial">
+    ```typescript
+    import { MeshBasicMaterial } from "three"
+    
+    // Unlit material (ignores lights)
+    const material = new MeshBasicMaterial({
+      color: 0xff0000,
+      transparent: true,
+      opacity: 0.8,
+    })
+    ```
+  </Tab>
+  
+  <Tab title="MeshStandardMaterial">
+    ```typescript
+    import { MeshStandardMaterial } from "three"
+    
+    // PBR material with metalness and roughness
+    const material = new MeshStandardMaterial({
+      color: 0x3b82f6,
+      metalness: 0.5,        // 0 = non-metal, 1 = metal
+      roughness: 0.5,        // 0 = smooth, 1 = rough
+    })
+    ```
+  </Tab>
+</Tabs>
+
+### Lighting
+
+<CodeGroup>
+
+```typescript Directional Light
+import { DirectionalLight } from "three"
+
+const sun = new DirectionalLight(0xffffff, 1.0)
+sun.position.set(5, 10, 5)
+sun.target.position.set(0, 0, 0)
+scene.add(sun)
+scene.add(sun.target)
+```
+
+```typescript Point Light
+import { PointLight } from "three"
+
+const bulb = new PointLight(0xffff00, 1.0, 100)
+bulb.position.set(0, 5, 0)
+scene.add(bulb)
+```
+
+```typescript Ambient Light
+import { AmbientLight } from "three"
+
+const ambient = new AmbientLight(0xffffff, 0.3)
+scene.add(ambient)
+```
+
+```typescript Spot Light
+import { SpotLight } from "three"
+
+const spot = new SpotLight(0xffffff, 1.0)
+spot.position.set(0, 10, 0)
+spot.angle = Math.PI / 6  // 30 degrees
+spot.penumbra = 0.1       // Soft edge
+scene.add(spot)
+```
+
+</CodeGroup>
+
+## Geometries
+
+### Primitive Shapes
+
+```typescript
+import {
+  BoxGeometry,
+  SphereGeometry,
+  CylinderGeometry,
+  TorusGeometry,
+  PlaneGeometry,
+} from "three"
+
+// Cube
+const box = new BoxGeometry(1, 1, 1)
+
+// Sphere
+const sphere = new SphereGeometry(
+  1,     // radius
+  32,    // width segments
+  32     // height segments
+)
+
+// Cylinder
+const cylinder = new CylinderGeometry(
+  0.5,   // top radius
+  0.5,   // bottom radius
+  2,     // height
+  32     // radial segments
+)
+
+// Torus (donut)
+const torus = new TorusGeometry(
+  1,     // radius
+  0.3,   // tube radius
+  16,    // radial segments
+  100    // tubular segments
+)
+
+// Plane
+const plane = new PlaneGeometry(5, 5)
+```
+
+## Post-Processing Effects
+
+Apply effects to rendered frames:
+
+<CodeGroup>
+
+```typescript Scanlines
+import * as Filters from "@opentui/core/post/filters"
+
+renderer.setFrameCallback(async (deltaTime) => {
+  await engine.render(framebuffer.frameBuffer, deltaTime)
+  
+  // Apply scanline effect
+  Filters.applyScanlines(framebuffer.frameBuffer, 0.85)
+})
+```
+
+```typescript Bloom
+import { BloomEffect } from "@opentui/core/post/filters"
+
+const bloom = new BloomEffect(
+  0.7,  // intensity
+  0.3,  // threshold
+  2     // radius
+)
+
+renderer.setFrameCallback(async (deltaTime) => {
+  await engine.render(framebuffer.frameBuffer, deltaTime)
+  bloom.apply(framebuffer.frameBuffer, deltaTime)
+})
+```
+
+```typescript Distortion
+import { DistortionEffect } from "@opentui/core/post/filters"
+
+const distortion = new DistortionEffect()
+distortion.amount = 5.0
+
+renderer.setFrameCallback(async (deltaTime) => {
+  await engine.render(framebuffer.frameBuffer, deltaTime)
+  distortion.apply(framebuffer.frameBuffer, deltaTime)
+})
+```
+
+```typescript Multiple Effects
+import * as Filters from "@opentui/core/post/filters"
+import { VignetteEffect, BlurEffect } from "@opentui/core/post/filters"
+
+const vignette = new VignetteEffect()
+const blur = new BlurEffect(1)
+
+renderer.setFrameCallback(async (deltaTime) => {
+  await engine.render(framebuffer.frameBuffer, deltaTime)
+  
+  // Apply multiple effects in order
+  blur.apply(framebuffer.frameBuffer, deltaTime)
+  vignette.apply(framebuffer.frameBuffer, deltaTime)
+  Filters.applyScanlines(framebuffer.frameBuffer, 0.9)
+})
+```
+
+</CodeGroup>
+
+### Available Effects
+
+- `applyScanlines(buffer, intensity)` - CRT scanline effect
+- `applyGrayscale(buffer)` - Convert to grayscale
+- `applySepia(buffer)` - Sepia tone
+- `applyInvert(buffer)` - Invert colors
+- `applyNoise(buffer, amount)` - Add noise
+- `applyChromaticAberration(buffer, offset)` - RGB shift
+- `applyAsciiArt(buffer)` - ASCII art filter
+- `BloomEffect` - Glow effect
+- `BlurEffect` - Gaussian blur
+- `VignetteEffect` - Edge darkening
+- `BrightnessEffect` - Adjust brightness
+- `DistortionEffect` - Warp/distort image
+
+## Textures
+
+### Loading Textures
+
+```typescript
+import { TextureUtils } from "@opentui/core/3d/TextureUtils"
+import { MeshPhongMaterial } from "three"
+
+// Load texture from URL or file
+const texture = await TextureUtils.loadTexture("path/to/texture.png")
+
+const material = new MeshPhongMaterial({
+  map: texture,          // Diffuse texture
+})
+
+const cube = new Mesh(geometry, material)
+```
+
+### Normal Maps
+
+```typescript
+const normalMap = await TextureUtils.loadTexture("normal.png")
+
+const material = new MeshPhongMaterial({
+  map: diffuseTexture,
+  normalMap: normalMap,
+  normalScale: new Vector2(1, 1),
+})
+```
+
+## Animation
+
+Combine with OpenTUI's timeline system:
+
+```typescript
+import { createTimeline } from "@opentui/core"
+
+const cube = new Mesh(geometry, material)
+scene.add(cube)
+
+const rotation = { x: 0, y: 0, z: 0 }
+const position = { x: 0, y: 0, z: 0 }
+
+const timeline = createTimeline({
+  duration: 5000,
+  loop: true,
+})
+
+// Rotate
+timeline.add(
+  rotation,
+  {
+    y: Math.PI * 2,
+    duration: 5000,
+    ease: "linear",
+    onUpdate: () => {
+      cube.rotation.y = rotation.y
+    },
+  }
+)
+
+// Move up and down
+timeline.add(
+  position,
+  {
+    y: 2,
+    duration: 2500,
+    ease: "inOutSine",
+    loop: true,
+    alternate: true,
+    onUpdate: () => {
+      cube.position.y = position.y
+    },
+  }
+)
+```
+
+## Complete Example: Rotating Cube
+
+```typescript
+import {
+  createCliRenderer,
+  FrameBufferRenderable,
+  ThreeCliRenderer,
+  BoxRenderable,
+  TextRenderable,
+  type KeyEvent,
+} from "@opentui/core"
+import {
+  Scene,
+  PerspectiveCamera,
+  Mesh,
+  BoxGeometry,
+  MeshPhongMaterial,
+  DirectionalLight,
+  AmbientLight,
+  PointLight,
+} from "three"
+import * as Filters from "@opentui/core/post/filters"
+
+const renderer = await createCliRenderer({
+  exitOnCtrlC: true,
+  targetFps: 60,
+})
+
+renderer.start()
+renderer.setBackgroundColor("#131336")
+
+// Background box
+const background = new BoxRenderable(renderer, {
+  id: "background",
+  width: renderer.terminalWidth - 10,
+  height: renderer.terminalHeight - 10,
+  position: "absolute",
+  left: 5,
+  top: 5,
+  backgroundColor: "#131336",
+  borderStyle: "single",
+  title: "3D Cube Demo",
+  titleAlignment: "center",
+})
+renderer.root.add(background)
+
+// 3D framebuffer
+const framebuffer = new FrameBufferRenderable(renderer, {
+  id: "3d-canvas",
+  width: renderer.terminalWidth,
+  height: renderer.terminalHeight,
+  zIndex: 10,
+  respectAlpha: true,
+})
+renderer.root.add(framebuffer)
+
+// Three.js scene setup
+const scene = new Scene()
+const camera = new PerspectiveCamera(
+  45,
+  renderer.terminalWidth / renderer.terminalHeight,
+  0.1,
+  100
+)
+camera.position.z = 3
+
+// Create cube
+const geometry = new BoxGeometry(1, 1, 1)
+const material = new MeshPhongMaterial({
+  color: 0x3b82f6,
+  specular: 0x111111,
+  shininess: 30,
+})
+const cube = new Mesh(geometry, material)
+scene.add(cube)
+
+// Lighting
+const ambient = new AmbientLight(0xffffff, 0.3)
+scene.add(ambient)
+
+const directional = new DirectionalLight(0xffffff, 0.8)
+directional.position.set(5, 5, 5)
+scene.add(directional)
+
+const point = new PointLight(0xff6b6b, 0.5, 100)
+point.position.set(-3, 0, 3)
+scene.add(point)
+
+// 3D engine
+const engine = new ThreeCliRenderer(renderer, {
+  width: renderer.terminalWidth,
+  height: renderer.terminalHeight,
+  scene,
+  camera,
+})
+
+// Controls text
+const controls = new TextRenderable(renderer, {
+  id: "controls",
+  content: "Arrow keys: rotate | Space: toggle effect | Ctrl+C: exit",
+  position: "absolute",
+  left: 10,
+  top: renderer.terminalHeight - 3,
+  fg: "#FFFFFF",
+  zIndex: 20,
+})
+renderer.root.add(controls)
+
+// State
+let rotationSpeed = { x: 0.01, y: 0.02 }
+let applyEffect = false
+
+// Keyboard controls
+renderer.keyInput.on("keypress", (key: KeyEvent) => {
+  if (key.name === "up") {
+    rotationSpeed.x += 0.01
+  } else if (key.name === "down") {
+    rotationSpeed.x -= 0.01
+  } else if (key.name === "left") {
+    rotationSpeed.y -= 0.01
+  } else if (key.name === "right") {
+    rotationSpeed.y += 0.01
+  } else if (key.name === "space") {
+    applyEffect = !applyEffect
+  }
+})
+
+// Render loop
+renderer.setFrameCallback(async (deltaTime) => {
+  // Rotate cube
+  cube.rotation.x += rotationSpeed.x
+  cube.rotation.y += rotationSpeed.y
+  
+  // Animate point light
+  const time = Date.now() * 0.001
+  point.position.x = Math.sin(time) * 3
+  point.position.z = Math.cos(time) * 3
+  
+  // Render 3D scene
+  await engine.render(framebuffer.frameBuffer, deltaTime)
+  
+  // Apply post-processing
+  if (applyEffect) {
+    Filters.applyScanlines(framebuffer.frameBuffer, 0.85)
+  }
+})
+```
+
+## Performance Tips
+
+<AccordionGroup>
+  <Accordion title="Optimize Geometry">
+    Use lower polygon counts for terminal rendering:
+    
+    ```typescript
+    // Good for terminal
+    const sphere = new SphereGeometry(1, 16, 16)
+    
+    // Too detailed for terminal
+    const sphere = new SphereGeometry(1, 64, 64)
+    ```
+  </Accordion>
+  
+  <Accordion title="Limit Post-Processing">
+    Some effects are expensive. Use sparingly:
+    
+    ```typescript
+    // Fast effects
+    Filters.applyGrayscale(buffer)
+    Filters.applyInvert(buffer)
+    
+    // Slower effects (use judiciously)
+    blur.apply(buffer)
+    bloom.apply(buffer)
+    ```
+  </Accordion>
+  
+  <Accordion title="Reduce Render Resolution">
+    Render at lower resolution for better performance:
+    
+    ```typescript
+    // Half resolution
+    const engine = new ThreeCliRenderer(renderer, {
+      width: Math.floor(renderer.terminalWidth / 2),
+      height: Math.floor(renderer.terminalHeight / 2),
+      scene,
+      camera,
+    })
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Syntax Highlighting" icon="code" href="/guides/syntax-highlighting">
+    Add tree-sitter code highlighting
+  </Card>
+  <Card title="Building Your First App" icon="rocket" href="/guides/building-your-first-app">
+    Complete tutorial for building apps
+  </Card>
+</CardGroup>

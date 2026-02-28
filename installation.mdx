@@ -1,0 +1,191 @@
+---
+title: Installation
+description: Install OpenTUI with your preferred package manager and set up system requirements
+---
+
+# Installation
+
+OpenTUI is available as an npm package and can be installed with any JavaScript package manager. This guide covers installation, system requirements, and verification steps.
+
+## System requirements
+
+Before installing OpenTUI, ensure you have the following prerequisites:
+
+### Required
+
+- **Zig compiler** - OpenTUI requires [Zig](https://ziglang.org/learn/getting-started/) to build the native core
+- **Bun 1.3.0+** (recommended), Node.js 18+, or another JavaScript runtime
+
+<Note>
+You must have Zig installed on your system to build OpenTUI packages. Visit the [Zig installation guide](https://ziglang.org/learn/getting-started/) for platform-specific instructions.
+</Note>
+
+### Supported platforms
+
+OpenTUI provides pre-built binaries for:
+
+- macOS (x64, ARM64)
+- Linux (x64, ARM64)
+- Windows (x64, ARM64)
+
+## Install OpenTUI
+
+Choose your preferred package manager to install the core OpenTUI package:
+
+<CodeGroup>
+```bash bun
+bun install @opentui/core
+```
+
+```bash npm
+npm install @opentui/core
+```
+
+```bash yarn
+yarn add @opentui/core
+```
+
+```bash pnpm
+pnpm add @opentui/core
+```
+</CodeGroup>
+
+<Tip>
+We recommend using [Bun](https://bun.sh) for the best development experience with OpenTUI. Bun provides faster installation, built-in TypeScript support, and is the primary runtime used by the OpenTUI team.
+</Tip>
+
+## Framework packages
+
+OpenTUI provides framework-specific packages for React and SolidJS:
+
+<CodeGroup>
+```bash React
+bun install @opentui/react
+```
+
+```bash SolidJS
+bun install @opentui/solid
+```
+</CodeGroup>
+
+<Note>
+Framework packages automatically include `@opentui/core` as a dependency.
+</Note>
+
+## Verify installation
+
+Create a simple test file to verify your installation:
+
+```typescript test.ts
+import { createCliRenderer, TextRenderable } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+const text = new TextRenderable(renderer, {
+  id: "test",
+  content: "OpenTUI is working!",
+  fg: "#00FF00",
+  position: "absolute",
+  left: 2,
+  top: 2,
+})
+
+renderer.root.add(text)
+```
+
+Run the test file:
+
+<CodeGroup>
+```bash bun
+bun run test.ts
+```
+
+```bash node
+node test.ts
+```
+</CodeGroup>
+
+You should see green text displayed in your terminal. Press `Ctrl+C` to exit.
+
+## Quick start with create-tui
+
+The fastest way to get started is using the [create-tui](https://github.com/msmps/create-tui) scaffolding tool:
+
+```bash
+bun create tui
+```
+
+This interactive CLI will:
+
+1. Prompt you for project configuration
+2. Set up a new OpenTUI project with best practices
+3. Install dependencies automatically
+4. Provide example code to get started
+
+## Try examples without installation
+
+You can explore OpenTUI examples without cloning the repository:
+
+<CodeGroup>
+```bash macOS/Linux/WSL
+curl -fsSL https://raw.githubusercontent.com/anomalyco/opentui/main/packages/core/src/examples/install.sh | sh
+```
+
+```bash Windows
+# Download from GitHub Releases
+# Visit: https://github.com/anomalyco/opentui/releases/latest
+```
+</CodeGroup>
+
+## Troubleshooting
+
+### Zig not found
+
+If you see an error about Zig not being found:
+
+1. Install Zig from [ziglang.org/learn/getting-started/](https://ziglang.org/learn/getting-started/)
+2. Ensure `zig` is in your PATH
+3. Verify installation: `zig version`
+
+### Build errors
+
+If you encounter build errors:
+
+1. Ensure you have the latest version of Zig
+2. Clear your package manager cache
+3. Try reinstalling dependencies
+
+<CodeGroup>
+```bash bun
+rm -rf node_modules bun.lockb
+bun install
+```
+
+```bash npm
+rm -rf node_modules package-lock.json
+npm install
+```
+</CodeGroup>
+
+### Platform-specific binaries
+
+OpenTUI automatically downloads platform-specific binaries. If you're on an unsupported platform, you may need to build from source. See the [Development Guide](https://github.com/anomalyco/opentui/blob/main/packages/core/docs/development.md) for instructions.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Quickstart tutorial"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Build your first TUI application
+  </Card>
+  <Card
+    title="Core concepts"
+    icon="book"
+    href="/core-concepts"
+  >
+    Learn about renderers, renderables, and layouts
+  </Card>
+</CardGroup>

@@ -1,0 +1,106 @@
+---
+title: Introduction
+description: A native terminal UI core written in Zig with TypeScript bindings for building high-performance terminal applications
+---
+
+# Introduction
+
+OpenTUI is a native terminal UI core written in Zig with TypeScript bindings. The native core exposes a C ABI and can be used from any language. OpenTUI powers [OpenCode](https://opencode.ai) in production today and will also power [terminal.shop](https://terminal.shop). It is an extensible core with a focus on correctness, stability, and high performance.
+
+## Key features
+
+OpenTUI provides a component-based architecture with flexible layout capabilities, allowing you to create complex terminal applications:
+
+- **Native performance** - Written in Zig with a focus on correctness and high performance
+- **Component-based architecture** - Build UIs with reusable, composable components
+- **Flexible layouts** - Uses the Yoga layout engine for CSS Flexbox-like capabilities
+- **Cross-language support** - C ABI allows usage from any language
+- **Rich components** - Text, boxes, inputs, selects, tabs, and more
+- **Advanced rendering** - FrameBuffer API for custom graphics and visual effects
+- **Built-in console** - Integrated debug console with log capture
+- **Theme support** - Automatic dark/light mode detection
+- **Production-ready** - Powers OpenCode in production
+
+## Get started
+
+<CardGroup cols={3}>
+  <Card
+    title="Quickstart"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Build your first TUI app in minutes
+  </Card>
+  <Card
+    title="Installation"
+    icon="download"
+    href="/installation"
+  >
+    Install OpenTUI with your package manager
+  </Card>
+  <Card
+    title="Core concepts"
+    icon="book"
+    href="/core-concepts/renderer"
+  >
+    Learn the fundamentals of OpenTUI
+  </Card>
+</CardGroup>
+
+## Quick example
+
+Here's a simple example to get you started:
+
+```typescript
+import { createCliRenderer, TextRenderable } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+const greeting = new TextRenderable(renderer, {
+  id: "greeting",
+  content: "Hello, OpenTUI!",
+  fg: "#00FF00",
+  position: "absolute",
+  left: 10,
+  top: 5,
+})
+
+renderer.root.add(greeting)
+```
+
+<Tip>
+Use [create-tui](https://github.com/msmps/create-tui) to quickly scaffold a new OpenTUI project:
+
+```bash
+bun create tui
+```
+</Tip>
+
+## Why OpenTUI?
+
+OpenTUI combines the best of both worlds: native performance through Zig with the developer experience of TypeScript. The architecture provides:
+
+- **Correctness** - Type-safe APIs with comprehensive error handling
+- **Stability** - Battle-tested in production with OpenCode
+- **Performance** - Native Zig core for maximum efficiency
+- **Extensibility** - Component-based design for easy customization
+- **Flexibility** - Works with React, SolidJS, or imperative APIs
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Installation guide"
+    icon="download"
+    href="/installation"
+  >
+    Set up OpenTUI with system requirements
+  </Card>
+  <Card
+    title="Build your first app"
+    icon="code"
+    href="/quickstart"
+  >
+    Follow our quickstart tutorial
+  </Card>
+</CardGroup>

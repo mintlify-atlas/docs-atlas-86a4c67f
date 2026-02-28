@@ -1,0 +1,253 @@
+---
+title: FrameBuffer
+description: A renderable component that wraps a custom frame buffer for advanced graphics and custom rendering
+---
+
+The `FrameBufferRenderable` provides a way to use custom graphics buffers within OpenTUI's layout system. It wraps an `OptimizedBuffer` that you can draw to directly, enabling advanced rendering techniques and custom graphics.
+
+## Import
+
+```typescript
+import { FrameBufferRenderable } from "@opentui/core"
+```
+
+## Basic Usage
+
+```typescript
+const framebuffer = new FrameBufferRenderable(ctx, {
+  width: 80,
+  height: 24,
+  respectAlpha: true
+})
+
+// Draw directly to the frame buffer
+framebuffer.frameBuffer.drawText("Hello", 0, 0, foregroundColor, backgroundColor)
+framebuffer.frameBuffer.drawRect(10, 5, 20, 10, borderColor)
+```
+
+## Props
+
+<ParamField path="width" type="number" required>
+  Initial width of the frame buffer in columns.
+</ParamField>
+
+<ParamField path="height" type="number" required>
+  Initial height of the frame buffer in rows.
+</ParamField>
+
+<ParamField path="respectAlpha" type="boolean" default="false">
+  Whether to respect alpha transparency when compositing the buffer. When `true`, transparent pixels allow content behind to show through.
+</ParamField>
+
+## Properties
+
+### frameBuffer
+
+Access to the underlying `OptimizedBuffer` for direct drawing operations:
+
+```typescript
+const buffer = framebuffer.frameBuffer
+
+// Drawing methods available:
+buffer.drawText(text, x, y, fg, bg, attributes)
+buffer.drawChar(char, x, y, fg, bg, attributes)
+buffer.drawRect(x, y, width, height, color)
+buffer.drawFrameBuffer(x, y, sourceBuffer)
+buffer.fill(char, fg, bg, attributes)
+buffer.clear()
+```
+
+See the `OptimizedBuffer` documentation for complete drawing API.
+
+## Methods
+
+### Automatic Resizing
+
+The frame buffer automatically resizes when the component's dimensions change:
+
+```typescript
+framebuffer.width = 100
+framebuffer.height = 30
+// frameBuffer is automatically resized to match
+```
+
+You can also control size through layout props like `flexGrow`, `flexShrink`, etc.
+
+## Examples
+
+### Custom Graphics Canvas
+
+```typescript
+import { FrameBufferRenderable } from "@opentui/core"
+import { parseColor } from "@opentui/core/lib"
+
+const canvas = new FrameBufferRenderable(ctx, {
+  width: 80,
+  height: 40,
+  respectAlpha: true,
+  flexGrow: 1
+})
+
+const white = parseColor("#ffffff")
+const black = parseColor("#000000")
+const blue = parseColor("#0066ff")
+
+// Draw a box with border
+canvas.frameBuffer.fill(" ", white, blue)
+canvas.frameBuffer.drawText("╔" + "═".repeat(78) + "╗", 0, 0, white, blue)
+canvas.frameBuffer.drawText("║", 0, 1, white, blue)
+canvas.frameBuffer.drawText("║", 79, 1, white, blue)
+canvas.frameBuffer.drawText("╚" + "═".repeat(78) + "╝", 0, 39, white, blue)
+
+// Draw text content
+canvas.frameBuffer.drawText("Custom Graphics", 2, 2, white, blue)
+```
+
+### Pixel Art Display
+
+```typescript
+const pixelArt = new FrameBufferRenderable(ctx, {
+  width: 32,
+  height: 32,
+  respectAlpha: false
+})
+
+// Create a simple pattern
+for (let y = 0; y < 32; y++) {
+  for (let x = 0; x < 32; x++) {
+    const color = parseColor(`rgb(${x * 8}, ${y * 8}, 128)`)
+    pixelArt.frameBuffer.drawChar("█", x, y, color, color)
+  }
+}
+```
+
+### Chart Renderer
+
+```typescript
+class ChartRenderable extends FrameBufferRenderable {
+  private data: number[] = []
+
+  constructor(ctx: RenderContext, width: number, height: number) {
+    super(ctx, { width, height, respectAlpha: false })
+  }
+
+  setData(values: number[]) {
+    this.data = values
+    this.redrawChart()
+  }
+
+  private redrawChart() {
+    const buffer = this.frameBuffer
+    const maxValue = Math.max(...this.data)
+    const white = parseColor("#ffffff")
+    const green = parseColor("#00ff00")
+    const bg = parseColor("#000000")
+
+    // Clear buffer
+    buffer.fill(" ", white, bg)
+
+    // Draw bars
+    const barWidth = Math.floor(this.width / this.data.length)
+    this.data.forEach((value, i) => {
+      const barHeight = Math.floor((value / maxValue) * this.height)
+      const x = i * barWidth
+      
+      for (let y = 0; y < barHeight; y++) {
+        buffer.drawChar("█", x, this.height - y - 1, green, bg)
+      }
+    })
+
+    this.requestRender()
+  }
+}
+
+// Usage
+const chart = new ChartRenderable(ctx, 40, 10)
+chart.setData([5, 12, 8, 15, 10, 18, 14, 9])
+```
+
+### Double-Buffered Animation
+
+```typescript
+const animation = new FrameBufferRenderable(ctx, {
+  width: 60,
+  height: 20,
+  respectAlpha: true
+})
+
+let frame = 0
+const white = parseColor("#ffffff")
+const black = parseColor("#000000")
+
+setInterval(() => {
+  // Clear buffer
+  animation.frameBuffer.clear()
+  
+  // Draw animated sprite
+  const x = (frame % 60)
+  const y = Math.floor(Math.sin(frame * 0.1) * 5) + 10
+  
+  animation.frameBuffer.drawText("●", x, y, white, black)
+  
+  // Trigger re-render
+  animation.requestRender()
+  
+  frame++
+}, 50)
+```
+
+### Off-screen Rendering
+
+```typescript
+// Render complex graphics off-screen then composite
+const offscreen = new FrameBufferRenderable(ctx, {
+  width: 100,
+  height: 100,
+  respectAlpha: true
+})
+
+const display = new FrameBufferRenderable(ctx, {
+  width: 50,
+  height: 50,
+  respectAlpha: true
+})
+
+// Draw to large off-screen buffer
+renderComplexGraphics(offscreen.frameBuffer)
+
+// Copy region to display buffer
+display.frameBuffer.drawFrameBuffer(0, 0, offscreen.frameBuffer)
+```
+
+## Use Cases
+
+- **Custom visualizations** - Charts, graphs, plots
+- **Pixel art** - Retro graphics and sprites  
+- **Image rendering** - Display processed images or photos
+- **Canvas drawing** - Freeform graphics and shapes
+- **Game graphics** - Sprites, tiles, and game elements
+- **Performance** - Batch drawing operations for complex scenes
+
+## Performance Considerations
+
+- Frame buffers store complete pixel data, so large buffers use more memory
+- Drawing to a frame buffer is efficient - changes only trigger re-render when `requestRender()` is called
+- Use `respectAlpha: false` when transparency is not needed for better performance
+- Consider buffer size relative to terminal dimensions
+
+## Lifecycle
+
+- The internal buffer is automatically resized when component dimensions change
+- The buffer is properly cleaned up when the component is destroyed
+- Call `requestRender()` after drawing operations to trigger a visual update
+
+## Notes
+
+- The frame buffer uses the same `widthMethod` as the render context for consistent character width handling
+- Resizing to invalid dimensions (≤ 0) throws an error
+- The component is visible by default and participates in normal layout
+- Use standard Renderable props for positioning, sizing, and layout
+
+## Source
+
+View the full source code at `packages/core/src/renderables/FrameBuffer.ts:11`

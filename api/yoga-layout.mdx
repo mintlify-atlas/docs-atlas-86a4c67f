@@ -1,0 +1,479 @@
+---
+title: 'Yoga Layout'
+description: 'Flexbox layout engine integration for OpenTUI components'
+---
+
+OpenTUI uses [Yoga Layout](https://www.yogalayout.dev/) (v3.2.1) for flexbox-based layout calculations. All layout properties are available on renderable components through the `LayoutOptions` interface.
+
+## Flex Container Properties
+
+<ParamField path="flexDirection" type="FlexDirectionString" default="column">
+  Defines the main axis direction of flex items.
+
+  **Values:** `"column"` | `"column-reverse"` | `"row"` | `"row-reverse"`
+
+  ```tsx
+  <Box flexDirection="row">
+    {/* Children laid out horizontally */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="flexWrap" type="WrapString" default="no-wrap">
+  Controls whether flex items wrap to multiple lines.
+
+  **Values:** `"no-wrap"` | `"wrap"` | `"wrap-reverse"`
+
+  ```tsx
+  <Box flexWrap="wrap">
+    {/* Items wrap to next line when needed */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="alignItems" type="AlignString" default="stretch">
+  Aligns flex items along the cross axis.
+
+  **Values:** `"auto"` | `"flex-start"` | `"center"` | `"flex-end"` | `"stretch"` | `"baseline"` | `"space-between"` | `"space-around"` | `"space-evenly"`
+
+  ```tsx
+  <Box alignItems="center">
+    {/* Items centered on cross axis */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="justifyContent" type="JustifyString" default="flex-start">
+  Aligns flex items along the main axis.
+
+  **Values:** `"flex-start"` | `"center"` | `"flex-end"` | `"space-between"` | `"space-around"` | `"space-evenly"`
+
+  ```tsx
+  <Box justifyContent="space-between">
+    {/* Space distributed between items */}
+  </Box>
+  ```
+</ParamField>
+
+## Flex Item Properties
+
+<ParamField path="flexGrow" type="number" default="0">
+  Defines how much a flex item should grow relative to siblings.
+
+  ```tsx
+  <Box flexGrow={1}>
+    {/* Takes up available space */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="flexShrink" type="number" default="1">
+  Defines how much a flex item should shrink relative to siblings.
+
+  Note: Defaults to 0 when explicit width or height is set.
+
+  ```tsx
+  <Box flexShrink={0}>
+    {/* Won't shrink below content size */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="flexBasis" type="number | 'auto'" default="auto">
+  Defines the default size of a flex item before remaining space is distributed.
+
+  ```tsx
+  <Box flexBasis={100}>
+    {/* Base size of 100 units */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="alignSelf" type="AlignString" default="auto">
+  Overrides the parent's `alignItems` for this specific item.
+
+  **Values:** `"auto"` | `"flex-start"` | `"center"` | `"flex-end"` | `"stretch"` | `"baseline"` | `"space-between"` | `"space-around"` | `"space-evenly"`
+
+  ```tsx
+  <Box alignSelf="flex-end">
+    {/* Aligned to end, regardless of parent alignItems */}
+  </Box>
+  ```
+</ParamField>
+
+## Size Properties
+
+<ParamField path="width" type="number | 'auto' | `${number}%`" default="auto">
+  Sets the width of the component.
+
+  ```tsx
+  <Box width={200}>
+    {/* Fixed width of 200 units */}
+  </Box>
+  <Box width="50%">
+    {/* 50% of parent width */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="height" type="number | 'auto' | `${number}%`" default="auto">
+  Sets the height of the component.
+
+  ```tsx
+  <Box height={100}>
+    {/* Fixed height of 100 units */}
+  </Box>
+  <Box height="auto">
+    {/* Height based on content */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="minWidth" type="number | 'auto' | `${number}%`">
+  Sets the minimum width constraint.
+
+  ```tsx
+  <Box minWidth={50}>
+    {/* Won't shrink below 50 units */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="minHeight" type="number | 'auto' | `${number}%`">
+  Sets the minimum height constraint.
+
+  ```tsx
+  <Box minHeight={30}>
+    {/* Won't shrink below 30 units */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="maxWidth" type="number | 'auto' | `${number}%`">
+  Sets the maximum width constraint.
+
+  ```tsx
+  <Box maxWidth={500}>
+    {/* Won't grow beyond 500 units */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="maxHeight" type="number | 'auto' | `${number}%`">
+  Sets the maximum height constraint.
+
+  ```tsx
+  <Box maxHeight={300}>
+    {/* Won't grow beyond 300 units */}
+  </Box>
+  ```
+</ParamField>
+
+## Position Properties
+
+<ParamField path="position" type="PositionTypeString" default="relative">
+  Defines the positioning type of the component.
+
+  **Values:** `"static"` | `"relative"` | `"absolute"`
+
+  ```tsx
+  <Box position="absolute" top={0} left={0}>
+    {/* Positioned absolutely from parent */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="top" type="number | 'auto' | `${number}%`">
+  Sets the top position offset.
+
+  ```tsx
+  <Box position="absolute" top={10}>
+    {/* 10 units from top */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="right" type="number | 'auto' | `${number}%`">
+  Sets the right position offset.
+
+  ```tsx
+  <Box position="absolute" right={10}>
+    {/* 10 units from right */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="bottom" type="number | 'auto' | `${number}%`">
+  Sets the bottom position offset.
+
+  ```tsx
+  <Box position="absolute" bottom={10}>
+    {/* 10 units from bottom */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="left" type="number | 'auto' | `${number}%`">
+  Sets the left position offset.
+
+  ```tsx
+  <Box position="absolute" left={10}>
+    {/* 10 units from left */}
+  </Box>
+  ```
+</ParamField>
+
+## Spacing Properties
+
+### Margin
+
+<ParamField path="margin" type="number | 'auto' | `${number}%`">
+  Sets margin on all sides.
+
+  ```tsx
+  <Box margin={10}>
+    {/* 10 units of margin on all sides */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="marginX" type="number | 'auto' | `${number}%`">
+  Sets horizontal margin (left and right).
+
+  ```tsx
+  <Box marginX={20}>
+    {/* 20 units of margin on left and right */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="marginY" type="number | 'auto' | `${number}%`">
+  Sets vertical margin (top and bottom).
+
+  ```tsx
+  <Box marginY={15}>
+    {/* 15 units of margin on top and bottom */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="marginTop" type="number | 'auto' | `${number}%`">
+  Sets top margin.
+
+  ```tsx
+  <Box marginTop={10}>
+    {/* 10 units of margin on top */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="marginRight" type="number | 'auto' | `${number}%`">
+  Sets right margin.
+
+  ```tsx
+  <Box marginRight={10}>
+    {/* 10 units of margin on right */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="marginBottom" type="number | 'auto' | `${number}%`">
+  Sets bottom margin.
+
+  ```tsx
+  <Box marginBottom={10}>
+    {/* 10 units of margin on bottom */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="marginLeft" type="number | 'auto' | `${number}%`">
+  Sets left margin.
+
+  ```tsx
+  <Box marginLeft={10}>
+    {/* 10 units of margin on left */}
+  </Box>
+  ```
+</ParamField>
+
+### Padding
+
+<ParamField path="padding" type="number | `${number}%`">
+  Sets padding on all sides.
+
+  ```tsx
+  <Box padding={10}>
+    {/* 10 units of padding on all sides */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="paddingX" type="number | `${number}%`">
+  Sets horizontal padding (left and right).
+
+  ```tsx
+  <Box paddingX={20}>
+    {/* 20 units of padding on left and right */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="paddingY" type="number | `${number}%`">
+  Sets vertical padding (top and bottom).
+
+  ```tsx
+  <Box paddingY={15}>
+    {/* 15 units of padding on top and bottom */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="paddingTop" type="number | `${number}%`">
+  Sets top padding.
+
+  ```tsx
+  <Box paddingTop={10}>
+    {/* 10 units of padding on top */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="paddingRight" type="number | `${number}%`">
+  Sets right padding.
+
+  ```tsx
+  <Box paddingRight={10}>
+    {/* 10 units of padding on right */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="paddingBottom" type="number | `${number}%`">
+  Sets bottom padding.
+
+  ```tsx
+  <Box paddingBottom={10}>
+    {/* 10 units of padding on bottom */}
+  </Box>
+  ```
+</ParamField>
+
+<ParamField path="paddingLeft" type="number | `${number}%`">
+  Sets left padding.
+
+  ```tsx
+  <Box paddingLeft={10}>
+    {/* 10 units of padding on left */}
+  </Box>
+  ```
+</ParamField>
+
+## Overflow
+
+<ParamField path="overflow" type="OverflowString" default="visible">
+  Controls how content that overflows the component's box is handled.
+
+  **Values:** `"visible"` | `"hidden"` | `"scroll"`
+
+  ```tsx
+  <Box overflow="hidden" width={100} height={100}>
+    {/* Content clipped to bounds */}
+  </Box>
+  ```
+</ParamField>
+
+## Other Properties
+
+<ParamField path="enableLayout" type="boolean" default="true">
+  Controls whether layout calculations are enabled for this component.
+
+  ```tsx
+  <Box enableLayout={false}>
+    {/* Layout calculations disabled */}
+  </Box>
+  ```
+</ParamField>
+
+## Type Definitions
+
+```typescript
+interface LayoutOptions {
+  // Flex container
+  flexDirection?: "column" | "column-reverse" | "row" | "row-reverse"
+  flexWrap?: "no-wrap" | "wrap" | "wrap-reverse"
+  alignItems?: "auto" | "flex-start" | "center" | "flex-end" | "stretch" | "baseline" | "space-between" | "space-around" | "space-evenly"
+  justifyContent?: "flex-start" | "center" | "flex-end" | "space-between" | "space-around" | "space-evenly"
+  
+  // Flex item
+  flexGrow?: number
+  flexShrink?: number
+  flexBasis?: number | "auto"
+  alignSelf?: "auto" | "flex-start" | "center" | "flex-end" | "stretch" | "baseline" | "space-between" | "space-around" | "space-evenly"
+  
+  // Size
+  width?: number | "auto" | `${number}%`
+  height?: number | "auto" | `${number}%`
+  minWidth?: number | "auto" | `${number}%`
+  minHeight?: number | "auto" | `${number}%`
+  maxWidth?: number | "auto" | `${number}%`
+  maxHeight?: number | "auto" | `${number}%`
+  
+  // Position
+  position?: "static" | "relative" | "absolute"
+  top?: number | "auto" | `${number}%`
+  right?: number | "auto" | `${number}%`
+  bottom?: number | "auto" | `${number}%`
+  left?: number | "auto" | `${number}%`
+  
+  // Spacing
+  margin?: number | "auto" | `${number}%`
+  marginX?: number | "auto" | `${number}%`
+  marginY?: number | "auto" | `${number}%`
+  marginTop?: number | "auto" | `${number}%`
+  marginRight?: number | "auto" | `${number}%`
+  marginBottom?: number | "auto" | `${number}%`
+  marginLeft?: number | "auto" | `${number}%`
+  padding?: number | `${number}%`
+  paddingX?: number | `${number}%`
+  paddingY?: number | `${number}%`
+  paddingTop?: number | `${number}%`
+  paddingRight?: number | `${number}%`
+  paddingBottom?: number | `${number}%`
+  paddingLeft?: number | `${number}%`
+  
+  // Overflow
+  overflow?: "visible" | "hidden" | "scroll"
+  
+  // Other
+  enableLayout?: boolean
+  id?: string
+}
+```
+
+## Usage Example
+
+```tsx
+import { Box, Text } from "@opentui/core"
+
+<Box
+  flexDirection="row"
+  alignItems="center"
+  justifyContent="space-between"
+  padding={10}
+  width="100%"
+  height={50}
+>
+  <Box flexGrow={1} marginRight={10}>
+    <Text>Left content</Text>
+  </Box>
+  <Box width={100} height={30}>
+    <Text>Right content</Text>
+  </Box>
+</Box>
+```
+
+## Related
+
+- [Yoga Layout Documentation](https://www.yogalayout.dev/) - Official Yoga Layout documentation
+- [Renderable](/api/renderable) - Base class that implements layout properties

@@ -1,0 +1,155 @@
+---
+title: Components Overview
+description: Complete reference of all available OpenTUI components for building terminal user interfaces
+---
+
+OpenTUI provides a comprehensive set of components for building rich terminal user interfaces. All components are fully typed and support reactive updates.
+
+## Layout Components
+
+<CardGroup cols={2}>
+  <Card title="Box" icon="square" href="/components/box">
+    Fundamental container with borders, backgrounds, and flexbox layout
+  </Card>
+  
+  <Card title="ScrollBox" icon="arrows-up-down" href="/components/scrollbox">
+    Scrollable container with vertical and horizontal scrollbars
+  </Card>
+  
+  <Card title="ScrollBar" icon="bars" href="/components/scrollbar">
+    Standalone scrollbar component for custom scroll implementations
+  </Card>
+</CardGroup>
+
+## Text & Content
+
+<CardGroup cols={2}>
+  <Card title="Text" icon="font" href="/components/text">
+    Display styled text with color, attributes, and wrapping
+  </Card>
+  
+  <Card title="Markdown" icon="markdown" href="/components/markdown">
+    Render markdown with syntax highlighting and custom styles
+  </Card>
+  
+  <Card title="Code" icon="code" href="/components/code">
+    Syntax-highlighted code display with Tree-sitter integration
+  </Card>
+  
+  <Card title="ASCIIFont" icon="font-case" href="/components/asciifont">
+    Render text using ASCII art fonts for headings and titles
+  </Card>
+</CardGroup>
+
+## Input & Forms
+
+<CardGroup cols={2}>
+  <Card title="Input" icon="text-cursor-input" href="/components/input">
+    Single-line text input with validation and events
+  </Card>
+  
+  <Card title="Textarea" icon="rectangle-vertical" href="/components/textarea">
+    Multi-line text editor with undo/redo and keybindings
+  </Card>
+  
+  <Card title="Select" icon="list" href="/components/select">
+    Vertical selection list with keyboard navigation
+  </Card>
+  
+  <Card title="TabSelect" icon="tabs" href="/components/tabselect">
+    Horizontal tab selector for switching between views
+  </Card>
+  
+  <Card title="Slider" icon="sliders" href="/components/slider">
+    Interactive slider for numeric value selection
+  </Card>
+</CardGroup>
+
+## Data Display
+
+<CardGroup cols={2}>
+  <Card title="TextTable" icon="table" href="/components/texttable">
+    Flexible table with wrapping, borders, and column sizing
+  </Card>
+  
+  <Card title="Diff" icon="code-compare" href="/components/diff">
+    Side-by-side or unified diff viewer with syntax highlighting
+  </Card>
+</CardGroup>
+
+## Utilities
+
+<CardGroup cols={2}>
+  <Card title="ScrollBar" icon="bars" href="/components/scrollbar">
+    Scroll indicators for scrollable content
+  </Card>
+  
+  <Card title="FrameBuffer" icon="border-all" href="/components/framebuffer-component">
+    Offscreen rendering buffer for optimized drawing
+  </Card>
+</CardGroup>
+
+## Component Features
+
+All OpenTUI components share common features:
+
+- **Flexbox Layout**: Full Yoga layout engine support with flex properties
+- **Reactive Updates**: Automatic re-rendering when properties change
+- **Event Handling**: Mouse and keyboard event support
+- **Selection**: Built-in text selection for most components
+- **Styling**: Color, background, borders, and text attributes
+- **Accessibility**: Keyboard navigation and focus management
+
+## Getting Started
+
+Import components from `@opentui/core`:
+
+```tsx
+import { Box, Text, Input, Select } from '@opentui/core'
+
+function App() {
+  return (
+    <Box border borderStyle="rounded" padding={1}>
+      <Text>Welcome to OpenTUI</Text>
+      <Input placeholder="Type something..." />
+    </Box>
+  )
+}
+```
+
+## Component Categories
+
+### Layout Components
+Layout components provide structure and organization for your UI. Use `Box` for general containers, `ScrollBox` when content exceeds viewport size.
+
+### Text & Content
+Text components handle rich content display with styling, markdown rendering, and syntax highlighting capabilities.
+
+### Input & Forms
+Input components enable user interaction through text entry, selection, and value adjustment.
+
+### Data Display
+Data display components present structured information like tables and code comparisons in readable formats.
+
+### Utilities
+Utility components enhance other components with features like line numbers or provide low-level rendering capabilities.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Renderable API" icon="sliders" href="/api/renderable">
+    Explore common props shared across components
+  </Card>
+  
+  <Card title="Styling Guide" icon="palette" href="/guides/styling-and-colors">
+    Learn how to style components with colors and attributes
+  </Card>
+  
+  <Card title="Layout System" icon="table-layout" href="/core-concepts/layout-system">
+    Understand the flexbox-based layout system
+  </Card>
+  
+  <Card title="Event Handling" icon="hand-pointer" href="/guides/keyboard-and-mouse">
+    Handle user interactions with mouse and keyboard
+  </Card>
+</CardGroup>

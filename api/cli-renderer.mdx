@@ -1,0 +1,584 @@
+---
+title: 'CliRenderer'
+description: 'Core renderer class for managing terminal UI rendering, input handling, and lifecycle'
+---
+
+## Overview
+
+The `CliRenderer` class is the core of OpenTUI's rendering system. It manages the render loop, handles terminal I/O, processes user input, and provides the rendering context for all UI elements.
+
+## Creating a Renderer
+
+### createCliRenderer()
+
+Creates and initializes a new CLI renderer instance.
+
+```typescript
+async function createCliRenderer(config?: CliRendererConfig): Promise<CliRenderer>
+```
+
+<ParamField path="config" type="CliRendererConfig">
+  Configuration options for the renderer
+</ParamField>
+
+<ResponseField name="CliRenderer" type="Promise<CliRenderer>">
+  Returns a fully initialized renderer instance
+</ResponseField>
+
+#### Example
+
+```typescript
+import { createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer({
+  targetFps: 60,
+  exitOnCtrlC: true,
+  useMouse: true,
+})
+```
+
+## Configuration Options
+
+### CliRendererConfig
+
+Configuration interface for renderer initialization.
+
+<ParamField path="stdin" type="NodeJS.ReadStream">
+  Custom stdin stream (defaults to `process.stdin`)
+</ParamField>
+
+<ParamField path="stdout" type="NodeJS.WriteStream">
+  Custom stdout stream (defaults to `process.stdout`)
+</ParamField>
+
+<ParamField path="remote" type="boolean">
+  Enable remote terminal mode
+</ParamField>
+
+<ParamField path="testing" type="boolean">
+  Enable testing mode (skips terminal setup)
+</ParamField>
+
+<ParamField path="exitOnCtrlC" type="boolean" default={true}>
+  Exit the process when Ctrl+C is pressed
+</ParamField>
+
+<ParamField path="exitSignals" type="NodeJS.Signals[]">
+  Custom list of signals that trigger exit
+</ParamField>
+
+<ParamField path="forwardEnvKeys" type="string[]">
+  Environment variables to forward to the renderer
+</ParamField>
+
+<ParamField path="debounceDelay" type="number" default={100}>
+  Debounce delay for resize events (in milliseconds)
+</ParamField>
+
+<ParamField path="targetFps" type="number" default={30}>
+  Target frames per second for rendering
+</ParamField>
+
+<ParamField path="maxFps" type="number" default={60}>
+  Maximum frames per second (caps render rate)
+</ParamField>
+
+<ParamField path="memorySnapshotInterval" type="number">
+  Interval for taking memory snapshots (in milliseconds)
+</ParamField>
+
+<ParamField path="useThread" type="boolean" default={true}>
+  Use threading for render operations (disabled on Linux)
+</ParamField>
+
+<ParamField path="gatherStats" type="boolean">
+  Collect rendering statistics
+</ParamField>
+
+<ParamField path="maxStatSamples" type="number" default={300}>
+  Maximum number of stat samples to keep
+</ParamField>
+
+<ParamField path="consoleOptions" type="ConsoleOptions">
+  Configuration for the console overlay
+</ParamField>
+
+<ParamField path="postProcessFns" type="((buffer: OptimizedBuffer, deltaTime: number) => void)[]">
+  Post-processing functions to apply after rendering
+</ParamField>
+
+<ParamField path="enableMouseMovement" type="boolean" default={true}>
+  Enable mouse movement events
+</ParamField>
+
+<ParamField path="useMouse" type="boolean" default={true}>
+  Enable mouse input
+</ParamField>
+
+<ParamField path="autoFocus" type="boolean" default={true}>
+  Automatically focus elements on mouse click
+</ParamField>
+
+<ParamField path="useAlternateScreen" type="boolean" default={true}>
+  Use alternate screen buffer
+</ParamField>
+
+<ParamField path="useConsole" type="boolean" default={true}>
+  Enable console overlay
+</ParamField>
+
+<ParamField path="experimental_splitHeight" type="number">
+  Split screen mode height (experimental)
+</ParamField>
+
+<ParamField path="useKittyKeyboard" type="KittyKeyboardOptions | null">
+  Kitty keyboard protocol options
+</ParamField>
+
+<ParamField path="backgroundColor" type="ColorInput">
+  Background color for the renderer
+</ParamField>
+
+<ParamField path="openConsoleOnError" type="boolean">
+  Automatically open console on uncaught errors
+</ParamField>
+
+<ParamField path="prependInputHandlers" type="((sequence: string) => boolean)[]">
+  Input handlers to prepend to the handler chain
+</ParamField>
+
+<ParamField path="onDestroy" type="() => void">
+  Callback invoked when the renderer is destroyed
+</ParamField>
+
+## Kitty Keyboard Protocol
+
+### KittyKeyboardOptions
+
+Configuration for the Kitty keyboard protocol, which provides enhanced key event handling.
+
+<ParamField path="disambiguate" type="boolean" default={true}>
+  Disambiguate escape codes (fixes ESC timing, alt+key ambiguity, ctrl+c as event)
+</ParamField>
+
+<ParamField path="alternateKeys" type="boolean" default={true}>
+  Report alternate keys (numpad, shifted, base layout) for cross-keyboard shortcuts
+</ParamField>
+
+<ParamField path="events" type="boolean" default={false}>
+  Report event types (press/repeat/release)
+</ParamField>
+
+<ParamField path="allKeysAsEscapes" type="boolean" default={false}>
+  Report all keys as escape codes
+</ParamField>
+
+<ParamField path="reportText" type="boolean" default={false}>
+  Report text associated with key events
+</ParamField>
+
+## CliRenderer Class
+
+### Properties
+
+<ResponseField name="root" type="RootRenderable">
+  The root renderable element (container for all UI elements)
+</ResponseField>
+
+<ResponseField name="width" type="number">
+  Current renderer width in terminal cells
+</ResponseField>
+
+<ResponseField name="height" type="number">
+  Current renderer height in terminal cells
+</ResponseField>
+
+<ResponseField name="terminalWidth" type="number">
+  Full terminal width (may differ from `width` in split mode)
+</ResponseField>
+
+<ResponseField name="terminalHeight" type="number">
+  Full terminal height (may differ from `height` in split mode)
+</ResponseField>
+
+<ResponseField name="console" type="TerminalConsole">
+  Console overlay instance for logging and debugging
+</ResponseField>
+
+<ResponseField name="keyInput" type="KeyHandler">
+  Key input handler for keyboard events
+</ResponseField>
+
+<ResponseField name="isRunning" type="boolean">
+  Whether the renderer is currently in a running state
+</ResponseField>
+
+<ResponseField name="isDestroyed" type="boolean">
+  Whether the renderer has been destroyed
+</ResponseField>
+
+<ResponseField name="useMouse" type="boolean">
+  Whether mouse input is enabled (can be set to toggle)
+</ResponseField>
+
+<ResponseField name="useConsole" type="boolean">
+  Whether console overlay is enabled (can be set to toggle)
+</ResponseField>
+
+<ResponseField name="capabilities" type="any | null">
+  Terminal capabilities detected from the terminal
+</ResponseField>
+
+<ResponseField name="resolution" type="PixelResolution | null">
+  Terminal pixel resolution (if available)
+</ResponseField>
+
+<ResponseField name="themeMode" type="ThemeMode | null">
+  Terminal theme mode (light/dark)
+</ResponseField>
+
+### Methods
+
+#### requestRender()
+
+Request a render pass. The renderer will schedule a render based on the current FPS settings.
+
+```typescript
+requestRender(): void
+```
+
+#### requestLive()
+
+Request continuous rendering (starts the render loop).
+
+```typescript
+requestLive(): void
+```
+
+#### dropLive()
+
+Stop continuous rendering (stops the render loop).
+
+```typescript
+dropLive(): void
+```
+
+#### start()
+
+Explicitly start the renderer.
+
+```typescript
+start(): void
+```
+
+#### pause()
+
+Pause the renderer (can be resumed).
+
+```typescript
+pause(): void
+```
+
+#### suspend()
+
+Suspend the renderer (similar to pause but different state).
+
+```typescript
+suspend(): void
+```
+
+#### resume()
+
+Resume the renderer after pause/suspend.
+
+```typescript
+resume(): void
+```
+
+#### idle()
+
+Wait for the renderer to become idle (no pending renders).
+
+```typescript
+idle(): Promise<void>
+```
+
+<ResponseField name="Promise<void>" type="Promise<void>">
+  Resolves when the renderer is idle
+</ResponseField>
+
+#### destroy()
+
+Clean up and destroy the renderer. This should be called when shutting down.
+
+```typescript
+destroy(): void
+```
+
+#### setBackgroundColor()
+
+Set the background color for the renderer.
+
+```typescript
+setBackgroundColor(color: ColorInput): void
+```
+
+<ParamField path="color" type="ColorInput">
+  Color value (hex string, RGBA object, or RGBA instance)
+</ParamField>
+
+#### setCursorPosition()
+
+Set the cursor position.
+
+```typescript
+setCursorPosition(x: number, y: number, visible?: boolean): void
+```
+
+<ParamField path="x" type="number">
+  X coordinate (column)
+</ParamField>
+
+<ParamField path="y" type="number">
+  Y coordinate (row)
+</ParamField>
+
+<ParamField path="visible" type="boolean" default={true}>
+  Whether the cursor should be visible
+</ParamField>
+
+#### setCursorStyle()
+
+Set the cursor style.
+
+```typescript
+setCursorStyle(options: CursorStyleOptions): void
+```
+
+<ParamField path="options" type="CursorStyleOptions">
+  Cursor style options
+</ParamField>
+
+#### setCursorColor()
+
+Set the cursor color.
+
+```typescript
+setCursorColor(color: RGBA): void
+```
+
+<ParamField path="color" type="RGBA">
+  RGBA color instance
+</ParamField>
+
+#### setTerminalTitle()
+
+Set the terminal window title.
+
+```typescript
+setTerminalTitle(title: string): void
+```
+
+<ParamField path="title" type="string">
+  Terminal title text
+</ParamField>
+
+#### toggleDebugOverlay()
+
+Toggle the debug overlay (shows FPS, memory, etc.).
+
+```typescript
+toggleDebugOverlay(): void
+```
+
+#### configureDebugOverlay()
+
+Configure the debug overlay.
+
+```typescript
+configureDebugOverlay(options: { enabled?: boolean; corner?: DebugOverlayCorner }): void
+```
+
+<ParamField path="options.enabled" type="boolean">
+  Enable or disable the overlay
+</ParamField>
+
+<ParamField path="options.corner" type="DebugOverlayCorner">
+  Corner to display the overlay
+</ParamField>
+
+#### addPostProcessFn()
+
+Add a post-processing function to run after each render.
+
+```typescript
+addPostProcessFn(processFn: (buffer: OptimizedBuffer, deltaTime: number) => void): void
+```
+
+<ParamField path="processFn" type="(buffer: OptimizedBuffer, deltaTime: number) => void">
+  Post-processing function
+</ParamField>
+
+#### removePostProcessFn()
+
+Remove a previously added post-processing function.
+
+```typescript
+removePostProcessFn(processFn: (buffer: OptimizedBuffer, deltaTime: number) => void): void
+```
+
+#### addInputHandler()
+
+Add an input handler to process raw terminal input sequences.
+
+```typescript
+addInputHandler(handler: (sequence: string) => boolean): void
+```
+
+<ParamField path="handler" type="(sequence: string) => boolean">
+  Handler function that returns true if the sequence was handled
+</ParamField>
+
+#### removeInputHandler()
+
+Remove a previously added input handler.
+
+```typescript
+removeInputHandler(handler: (sequence: string) => boolean): void
+```
+
+#### setFrameCallback()
+
+Set a callback to run on each frame.
+
+```typescript
+setFrameCallback(callback: (deltaTime: number) => Promise<void>): void
+```
+
+<ParamField path="callback" type="(deltaTime: number) => Promise<void>">
+  Async callback function
+</ParamField>
+
+#### copyToClipboardOSC52()
+
+Copy text to the system clipboard using OSC 52 escape sequence.
+
+```typescript
+copyToClipboardOSC52(text: string, target?: ClipboardTarget): boolean
+```
+
+<ParamField path="text" type="string">
+  Text to copy
+</ParamField>
+
+<ParamField path="target" type="ClipboardTarget">
+  Clipboard target (clipboard, primary, or secondary)
+</ParamField>
+
+<ResponseField name="boolean" type="boolean">
+  Whether the copy operation succeeded
+</ResponseField>
+
+### Events
+
+#### resize
+
+Emitted when the terminal is resized.
+
+```typescript
+renderer.on('resize', (width: number, height: number) => {
+  console.log(`Terminal resized to ${width}x${height}`)
+})
+```
+
+#### destroy
+
+Emitted when the renderer is destroyed.
+
+```typescript
+renderer.on('destroy', () => {
+  console.log('Renderer destroyed')
+})
+```
+
+#### focus
+
+Emitted when the terminal gains focus.
+
+```typescript
+renderer.on('focus', () => {
+  console.log('Terminal focused')
+})
+```
+
+#### blur
+
+Emitted when the terminal loses focus.
+
+```typescript
+renderer.on('blur', () => {
+  console.log('Terminal blurred')
+})
+```
+
+#### theme_mode
+
+Emitted when the terminal theme mode changes.
+
+```typescript
+renderer.on('theme_mode', (mode: 'light' | 'dark') => {
+  console.log(`Theme changed to ${mode}`)
+})
+```
+
+## Mouse Events
+
+### MouseEvent
+
+Represents a mouse event in the terminal.
+
+<ResponseField name="type" type="MouseEventType">
+  Event type: 'down', 'up', 'move', 'drag', 'scroll', 'over', 'out', 'drop', 'drag-end'
+</ResponseField>
+
+<ResponseField name="button" type="number">
+  Mouse button: 0 (left), 1 (middle), 2 (right), 4 (wheel up), 5 (wheel down)
+</ResponseField>
+
+<ResponseField name="x" type="number">
+  X coordinate in terminal cells
+</ResponseField>
+
+<ResponseField name="y" type="number">
+  Y coordinate in terminal cells
+</ResponseField>
+
+<ResponseField name="target" type="Renderable | null">
+  The renderable that was clicked
+</ResponseField>
+
+<ResponseField name="modifiers" type="{ shift: boolean; alt: boolean; ctrl: boolean }">
+  Modifier keys pressed during the event
+</ResponseField>
+
+<ResponseField name="scroll" type="ScrollInfo | undefined">
+  Scroll information (for scroll events)
+</ResponseField>
+
+### Methods
+
+#### stopPropagation()
+
+Stop the event from propagating to parent elements.
+
+```typescript
+stopPropagation(): void
+```
+
+#### preventDefault()
+
+Prevent the default action for this event.
+
+```typescript
+preventDefault(): void
+```

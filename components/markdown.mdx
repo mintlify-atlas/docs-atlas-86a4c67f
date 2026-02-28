@@ -1,0 +1,388 @@
+---
+title: Markdown
+description: Render Markdown content with automatic table alignment, syntax highlighting, and streaming support
+---
+
+## Overview
+
+The `MarkdownRenderable` component renders Markdown content with full support for tables, code blocks, inline formatting, and more. It uses the `marked` parser internally and provides syntax highlighting for code blocks via Tree-sitter.
+
+## Basic Usage
+
+```typescript
+import { MarkdownRenderable, SyntaxStyle } from "@opentui/core"
+
+const syntaxStyle = SyntaxStyle.fromStyles({
+  "markup.heading": { fg: parseColor("#58A6FF"), bold: true },
+  "markup.link": { fg: parseColor("#58A6FF"), underline: true },
+  default: { fg: parseColor("#E6EDF3") },
+})
+
+const markdown = new MarkdownRenderable(renderer, {
+  content: "# Hello World\n\nThis is **bold** text.",
+  syntaxStyle,
+  conceal: true,
+})
+```
+
+## Props
+
+<ParamField path="content" type="string" default="''">
+  Markdown content to render.
+</ParamField>
+
+<ParamField path="syntaxStyle" type="SyntaxStyle" required>
+  Syntax styling configuration for markdown elements and code blocks.
+</ParamField>
+
+<ParamField path="conceal" type="boolean" default="true">
+  Hide formatting markers (e.g., `**`, `*`, \`\`, `[]()`).
+  
+  When `true`: `**bold**` → **bold**
+  
+  When `false`: `**bold**` → \*\*bold\*\*
+</ParamField>
+
+<ParamField path="treeSitterClient" type="TreeSitterClient">
+  Tree-sitter client for syntax highlighting code blocks. Uses default client if not provided.
+</ParamField>
+
+<ParamField path="streaming" type="boolean" default="false">
+  Enable streaming mode for incremental content updates. Keeps trailing tokens unstable to handle incomplete content.
+</ParamField>
+
+<ParamField path="tableOptions" type="MarkdownTableOptions">
+  Configuration for rendered markdown tables.
+</ParamField>
+
+<ParamField path="renderNode" type="(token: Token, context: RenderNodeContext) => Renderable | undefined">
+  Custom node renderer. Return a Renderable to override default rendering, or undefined to use default.
+</ParamField>
+
+### Table Options
+
+<ParamField path="tableOptions.widthMode" type="'content' | 'full'" default="'full'">
+  Column sizing strategy:
+  - `'content'`: Columns fit to intrinsic content width
+  - `'full'`: Columns expand to fill available width
+</ParamField>
+
+<ParamField path="tableOptions.columnFitter" type="'uniform' | 'proportional'" default="'proportional'">
+  Column fitting method when shrinking constrained tables.
+</ParamField>
+
+<ParamField path="tableOptions.wrapMode" type="'none' | 'char' | 'word'" default="'word'">
+  Text wrapping strategy for table cell content.
+</ParamField>
+
+<ParamField path="tableOptions.cellPadding" type="number" default="0">
+  Padding applied on all sides of each table cell.
+</ParamField>
+
+<ParamField path="tableOptions.borders" type="boolean" default="true">
+  Enable/disable table border rendering.
+</ParamField>
+
+<ParamField path="tableOptions.borderStyle" type="BorderStyle" default="'single'">
+  Border style for markdown tables (`'single'`, `'double'`, etc.).
+</ParamField>
+
+<ParamField path="tableOptions.borderColor" type="ColorInput">
+  Border color. Defaults to conceal style color.
+</ParamField>
+
+<ParamField path="tableOptions.selectable" type="boolean" default="true">
+  Enable selection support on markdown tables.
+</ParamField>
+
+## Supported Markdown Features
+
+### Headings
+
+```markdown
+# Heading 1
+## Heading 2
+### Heading 3
+```
+
+### Text Formatting
+
+```markdown
+**bold text**
+*italic text*
+~~strikethrough~~
+`inline code`
+```
+
+### Links
+
+```markdown
+[Link text](https://example.com)
+![Image alt](https://example.com/image.png)
+```
+
+### Lists
+
+```markdown
+- Unordered item 1
+- Unordered item 2
+
+1. Ordered item 1
+2. Ordered item 2
+```
+
+### Blockquotes
+
+```markdown
+> This is a blockquote
+> with multiple lines
+```
+
+### Code Blocks
+
+````markdown
+```typescript
+const message = "Hello World"
+console.log(message)
+```
+````
+
+### Tables
+
+```markdown
+| Feature | Status | Priority |
+|---|---|---|
+| Table alignment | Done | High |
+| Conceal mode | Working | Medium |
+```
+
+### Horizontal Rules
+
+```markdown
+---
+```
+
+## Methods
+
+### clearCache()
+
+Force re-render by clearing the parse cache.
+
+```typescript
+markdown.clearCache()
+```
+
+### refreshStyles()
+
+Re-render blocks with updated styles without rebuilding parse state.
+
+```typescript
+markdown.syntaxStyle = newSyntaxStyle
+markdown.refreshStyles()
+```
+
+## Examples
+
+### GitHub Dark Theme
+
+```typescript
+const syntaxStyle = SyntaxStyle.fromStyles({
+  "markup.heading": { fg: parseColor("#58A6FF"), bold: true },
+  "markup.heading.1": { fg: parseColor("#00FF88"), bold: true, underline: true },
+  "markup.heading.2": { fg: parseColor("#00D7FF"), bold: true },
+  "markup.bold": { fg: parseColor("#F0F6FC"), bold: true },
+  "markup.strong": { fg: parseColor("#F0F6FC"), bold: true },
+  "markup.italic": { fg: parseColor("#F0F6FC"), italic: true },
+  "markup.raw": { fg: parseColor("#A5D6FF"), bg: parseColor("#161B22") },
+  "markup.link": { fg: parseColor("#58A6FF"), underline: true },
+  "markup.link.url": { fg: parseColor("#58A6FF"), underline: true },
+  "punctuation.special": { fg: parseColor("#8B949E") },
+  default: { fg: parseColor("#E6EDF3") },
+})
+
+const markdown = new MarkdownRenderable(renderer, {
+  content: markdownContent,
+  syntaxStyle,
+  conceal: true,
+})
+```
+
+### Markdown with Tables
+
+```typescript
+const content = `
+# Project Status
+
+| Feature | Status | Priority |
+|---|---|---|
+| Table alignment | **Done** | High |
+| Conceal mode | *Working* | Medium |
+| Theme switching | **Done** | Low |
+`
+
+const markdown = new MarkdownRenderable(renderer, {
+  content,
+  syntaxStyle,
+  tableOptions: {
+    widthMode: "full",
+    cellPadding: 1,
+    borders: true,
+    borderStyle: "single",
+  },
+})
+```
+
+### Streaming Mode
+
+```typescript
+const markdown = new MarkdownRenderable(renderer, {
+  content: "",
+  syntaxStyle,
+  streaming: true, // Enable incremental updates
+})
+
+// Simulate streaming content
+let position = 0
+const fullContent = "# Streaming\n\nThis content arrives gradually..."
+
+const interval = setInterval(() => {
+  const chunk = fullContent.slice(0, position + 10)
+  markdown.content = chunk
+  position += 10
+  
+  if (position >= fullContent.length) {
+    markdown.streaming = false // Finalize
+    clearInterval(interval)
+  }
+}, 100)
+```
+
+### Custom Table Styling
+
+```typescript
+const markdown = new MarkdownRenderable(renderer, {
+  content: markdownWithTables,
+  syntaxStyle,
+  tableOptions: {
+    widthMode: "content",
+    wrapMode: "word",
+    cellPadding: 2,
+    borders: true,
+    borderStyle: "double",
+    borderColor: "#4ECDC4",
+    selectable: true,
+  },
+})
+```
+
+### Conceal Toggle
+
+```typescript
+const markdown = new MarkdownRenderable(renderer, {
+  content: "**bold** and *italic* text",
+  syntaxStyle,
+  conceal: true,
+})
+
+// Toggle conceal on keypress
+renderer.keyInput.on("keypress", (key) => {
+  if (key.name === "c") {
+    markdown.conceal = !markdown.conceal
+  }
+})
+```
+
+### Custom Node Renderer
+
+```typescript
+const markdown = new MarkdownRenderable(renderer, {
+  content: markdownContent,
+  syntaxStyle,
+  renderNode: (token, context) => {
+    // Custom rendering for specific token types
+    if (token.type === "heading" && token.depth === 1) {
+      // Return custom renderable for h1 elements
+      return new CustomHeaderRenderable(renderer, {
+        text: token.text,
+      })
+    }
+    // Return undefined to use default rendering
+    return undefined
+  },
+})
+```
+
+## Syntax Style Groups
+
+Markdown uses the following syntax style groups:
+
+- `markup.heading`, `markup.heading.1` through `markup.heading.6`
+- `markup.bold`, `markup.strong`
+- `markup.italic`
+- `markup.list`
+- `markup.quote`
+- `markup.raw`, `markup.raw.block`, `markup.raw.inline`
+- `markup.link`, `markup.link.label`, `markup.link.url`
+- `punctuation.special`
+- `conceal` (for concealed formatting markers)
+- `default`
+
+## Properties
+
+### content
+
+Get or set the markdown content.
+
+```typescript
+markdown.content = "# New Content"
+const current = markdown.content
+```
+
+### syntaxStyle
+
+Get or set the syntax style.
+
+```typescript
+markdown.syntaxStyle = newSyntaxStyle
+```
+
+### conceal
+
+Get or set conceal mode.
+
+```typescript
+markdown.conceal = false // Show formatting markers
+```
+
+### streaming
+
+Get or set streaming mode.
+
+```typescript
+markdown.streaming = true
+```
+
+### tableOptions
+
+Get or set table rendering options.
+
+```typescript
+markdown.tableOptions = {
+  widthMode: "content",
+  cellPadding: 2,
+}
+```
+
+## Performance
+
+- Uses AST-based parsing with `marked` for accurate Markdown parsing
+- Implements caching for repeated content to avoid redundant parsing
+- Smart width calculation accounting for concealed characters
+- Incremental rendering in streaming mode
+- Efficient table rendering with change detection
+
+## Related Components
+
+- [Text](/components/text) - Plain text display
+- [Code](/components/code) - Syntax-highlighted code blocks
+- [TextTable](/components/texttable) - Table component (used internally)

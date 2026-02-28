@@ -1,0 +1,307 @@
+---
+title: TextNode
+description: Build rich text with nested styling, colors, and attributes for complex text composition
+---
+
+## Overview
+
+The `TextNodeRenderable` component enables rich text composition by building tree structures of styled text nodes. Each node can have its own colors, attributes (bold, italic, underline), and can contain child nodes that inherit and override parent styles.
+
+## Basic Usage
+
+```typescript
+import { TextNodeRenderable } from "@opentui/core"
+
+const node = TextNodeRenderable.fromString("Hello, World!", {
+  fg: "#58a6ff",
+  attributes: 1, // bold
+})
+```
+
+## Props
+
+<ParamField path="fg" type="string | RGBA">
+  Foreground color for the text node. Inherits from parent if not specified.
+</ParamField>
+
+<ParamField path="bg" type="string | RGBA">
+  Background color for the text node. Inherits from parent if not specified.
+</ParamField>
+
+<ParamField path="attributes" type="number" default="0">
+  Text attributes as a bitmask:
+  - `1`: Bold
+  - `2`: Italic
+  - `4`: Underline
+  - `8`: Dim
+  
+  Combine with bitwise OR: `1 | 4` for bold + underline.
+</ParamField>
+
+<ParamField path="link" type="{ url: string }">
+  Link URL for clickable text.
+</ParamField>
+
+<ParamField path="id" type="string">
+  Optional unique identifier for the node.
+</ParamField>
+
+## Static Methods
+
+### fromString()
+
+Create a TextNode from a string.
+
+```typescript
+const node = TextNodeRenderable.fromString("Hello", {
+  fg: "#ff7b72",
+  attributes: 1, // bold
+})
+```
+
+### fromNodes()
+
+Create a TextNode containing multiple child nodes.
+
+```typescript
+const titleNode = TextNodeRenderable.fromString("Title", { fg: "#58a6ff" })
+const bodyNode = TextNodeRenderable.fromString(" - Body text", { fg: "#c9d1d9" })
+
+const container = TextNodeRenderable.fromNodes([titleNode, bodyNode])
+```
+
+## Methods
+
+### add()
+
+Add a child node, string, or StyledText.
+
+```typescript
+const parent = new TextNodeRenderable({})
+parent.add("Plain text")
+parent.add(TextNodeRenderable.fromString("Styled", { fg: "#ff0000" }))
+```
+
+**Parameters:**
+- `obj`: `TextNodeRenderable | StyledText | string`
+- `index?`: Optional insertion index
+
+**Returns:** `number` - Index where the item was inserted
+
+### remove()
+
+Remove a child node by ID.
+
+```typescript
+parent.remove(childNode.id)
+```
+
+### insertBefore()
+
+Insert a node before an anchor node.
+
+```typescript
+parent.insertBefore(newNode, anchorNode)
+```
+
+### clear()
+
+Remove all children.
+
+```typescript
+node.clear()
+```
+
+### toChunks()
+
+Convert the node tree to TextChunks with inherited styles.
+
+```typescript
+const chunks = node.toChunks()
+```
+
+## Examples
+
+### Basic Styled Text
+
+```typescript
+const redNode = TextNodeRenderable.fromString("Red Text", {
+  fg: "#ff7b72",
+})
+
+const blueNode = TextNodeRenderable.fromString(" | Blue Text", {
+  fg: "#79c0ff",
+})
+
+const text = new TextRenderable(renderer, { width: 60 })
+text.add(redNode)
+text.add(blueNode)
+```
+
+### Nested Composition
+
+```typescript
+const commentNode = TextNodeRenderable.fromString("// This is a comment", {
+  fg: "#8b949e",
+})
+
+const highlightNode = TextNodeRenderable.fromString(" with ", {
+  fg: "#79c0ff",
+  attributes: 1, // bold
+})
+
+const emphasisNode = TextNodeRenderable.fromString("emphasis", {
+  fg: "#ff7b72",
+  attributes: 4, // underline
+})
+
+// Build a sentence with mixed styling
+const sentence = TextNodeRenderable.fromNodes([
+  commentNode,
+  highlightNode,
+  emphasisNode,
+])
+```
+
+### Dynamic Updates
+
+```typescript
+const counterNode = TextNodeRenderable.fromString("Counter: 0", {
+  fg: "#56d364",
+  attributes: 1,
+})
+
+const text = new TextRenderable(renderer, { width: 60 })
+text.add(counterNode)
+
+let count = 0
+setInterval(() => {
+  count++
+  counterNode.children = [`Counter: ${count}`]
+  // TextRenderable automatically updates from TextNode changes
+}, 1000)
+```
+
+### Complex Document Structure
+
+```typescript
+const headerNode = TextNodeRenderable.fromString("📋 Project Status Report", {
+  fg: "#ffffff",
+  attributes: 1,
+})
+
+const progressSection = TextNodeRenderable.fromNodes([
+  TextNodeRenderable.fromString("\n🚀 ", { fg: "#56d364" }),
+  TextNodeRenderable.fromString("Progress", { fg: "#58a6ff", attributes: 1 }),
+  TextNodeRenderable.fromString(": 85% complete", { fg: "#c9d1d9" }),
+])
+
+const issuesSection = TextNodeRenderable.fromNodes([
+  TextNodeRenderable.fromString("\n⚠️  ", { fg: "#d29922" }),
+  TextNodeRenderable.fromString("Issues", { fg: "#ff7b72", attributes: 1 }),
+  TextNodeRenderable.fromString(": 2 minor issues found", { fg: "#c9d1d9" }),
+])
+
+const document = TextNodeRenderable.fromNodes([
+  headerNode,
+  progressSection,
+  issuesSection,
+])
+
+const text = new TextRenderable(renderer, { width: 60 })
+text.add(document)
+```
+
+### Style Inheritance
+
+```typescript
+// Parent node with base styling
+const parentNode = TextNodeRenderable.fromString("", {
+  fg: "#c9d1d9",
+  attributes: 0,
+})
+
+// Child inherits parent color but adds bold
+const childNode = TextNodeRenderable.fromString("Bold text", {
+  attributes: 1, // inherits fg from parent, adds bold
+})
+
+parentNode.add(childNode)
+```
+
+### Links
+
+```typescript
+const linkNode = TextNodeRenderable.fromString("Visit OpenTUI", {
+  fg: "#58a6ff",
+  attributes: 4, // underline
+  link: { url: "https://github.com/opentui" },
+})
+```
+
+## Properties
+
+### children
+
+Access or modify the node's children.
+
+```typescript
+const children = node.children // (string | TextNodeRenderable)[]
+node.children = ["New content"]
+```
+
+### parent
+
+Access the parent node.
+
+```typescript
+const parent = node.parent // TextNodeRenderable | null
+```
+
+### Styling Properties
+
+Get or set styling properties dynamically:
+
+```typescript
+node.fg = "#ff0000"
+node.bg = "#000000"
+node.attributes = 1 | 4 // bold + underline
+node.link = { url: "https://example.com" }
+```
+
+## Helper Functions
+
+OpenTUI provides convenient helper functions for common text styling:
+
+```typescript
+import { t, bold, italic, underline, dim, green, red, blue, yellow, cyan } from "@opentui/core"
+
+// Template literal helper
+const content = t`${bold("Hello")} ${red("World")}!`
+
+// Color helpers
+const greenText = green("Success")
+const redText = red("Error")
+
+// Style helpers
+const boldText = bold("Important")
+const italicText = italic("Emphasis")
+const underlineText = underline("Link")
+
+// Combine multiple styles
+const styledText = bold(green("Success!"))
+```
+
+## Use Cases
+
+- **Syntax highlighting**: Build custom syntax highlighting by composing colored nodes
+- **Rich text editors**: Dynamic text editing with inline styling
+- **Status displays**: Color-coded status indicators with icons
+- **Log viewers**: Styled log messages with severity colors
+- **Documentation**: Complex formatted documents with mixed styling
+
+## Related Components
+
+- [Text](/components/text) - Plain and styled text display
+- [Code](/components/code) - Syntax-highlighted code
+- [Markdown](/components/markdown) - Markdown rendering

@@ -1,0 +1,641 @@
+---
+title: Syntax Highlighting
+description: Add tree-sitter powered syntax highlighting to your terminal applications
+---
+
+OpenTUI integrates with Tree-sitter to provide fast, accurate syntax highlighting for code. Tree-sitter is an incremental parsing library that powers syntax highlighting in VS Code, Neovim, and many other editors.
+
+## Quick Start
+
+Highlight code with the built-in JavaScript/TypeScript support:
+
+```typescript
+import { getTreeSitterClient, CodeRenderable } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+// Initialize Tree-sitter client
+const client = getTreeSitterClient()
+await client.initialize()
+
+// Create a code block with syntax highlighting
+const codeBlock = new CodeRenderable(renderer, {
+  id: "code-1",
+  content: `function hello() {
+  console.log("Hello, OpenTUI!")
+  return 42
+}`,
+  filetype: "javascript",
+  width: 40,
+  height: 10,
+})
+
+renderer.root.add(codeBlock)
+```
+
+## Tree-Sitter Client
+
+### Initialization
+
+The Tree-sitter client manages parsers and performs highlighting:
+
+```typescript
+import { getTreeSitterClient, TreeSitterClient } from "@opentui/core"
+
+// Get the global singleton client
+const client = getTreeSitterClient()
+await client.initialize()
+
+// Or create a custom client
+const customClient = new TreeSitterClient({
+  dataPath: "./cache", // Cache directory for parsers
+})
+await customClient.initialize()
+```
+
+### One-Time Highlighting
+
+Highlight code without creating a CodeRenderable:
+
+```typescript
+const code = `const x = 42;
+console.log(x);`
+
+const result = await client.highlightOnce(code, "javascript")
+
+// result contains highlighted text with ANSI color codes
+console.log(result)
+```
+
+## Adding Custom Parsers
+
+Extend language support by adding custom Tree-sitter parsers.
+
+### Global Default Parsers
+
+Add parsers that all clients will use:
+
+```typescript
+import { addDefaultParsers, getTreeSitterClient } from "@opentui/core"
+
+// Add Python parser
+addDefaultParsers([
+  {
+    filetype: "python",
+    wasm: "https://github.com/tree-sitter/tree-sitter-python/releases/download/v0.23.6/tree-sitter-python.wasm",
+    queries: {
+      highlights: [
+        "https://raw.githubusercontent.com/tree-sitter/tree-sitter-python/master/queries/highlights.scm",
+      ],
+    },
+  },
+])
+
+// Now all clients have Python support
+const client = getTreeSitterClient()
+await client.initialize()
+
+const result = await client.highlightOnce(
+  'def hello():\n    print("world")',
+  "python"
+)
+```
+
+### Per-Client Parsers
+
+Add parsers to specific client instances:
+
+```typescript
+import { TreeSitterClient } from "@opentui/core"
+
+const client = new TreeSitterClient({ dataPath: "./cache" })
+await client.initialize()
+
+// Add Rust parser to this client only
+client.addFiletypeParser({
+  filetype: "rust",
+  wasm: "https://github.com/tree-sitter/tree-sitter-rust/releases/download/v0.23.2/tree-sitter-rust.wasm",
+  queries: {
+    highlights: [
+      "https://raw.githubusercontent.com/tree-sitter/tree-sitter-rust/master/queries/highlights.scm",
+    ],
+  },
+})
+
+const rustCode = `fn main() {
+    println!("Hello, world!");
+}`
+
+const result = await client.highlightOnce(rustCode, "rust")
+```
+
+## Finding Parsers and Queries
+
+### Official Tree-Sitter Parsers
+
+Most popular languages have official parsers on GitHub:
+
+<CodeGroup>
+
+```typescript Python
+const pythonParser = {
+  filetype: "python",
+  wasm: "https://github.com/tree-sitter/tree-sitter-python/releases/download/v0.23.6/tree-sitter-python.wasm",
+  queries: {
+    highlights: [
+      "https://raw.githubusercontent.com/tree-sitter/tree-sitter-python/master/queries/highlights.scm",
+    ],
+  },
+}
+```
+
+```typescript Rust
+const rustParser = {
+  filetype: "rust",
+  wasm: "https://github.com/tree-sitter/tree-sitter-rust/releases/download/v0.23.2/tree-sitter-rust.wasm",
+  queries: {
+    highlights: [
+      "https://raw.githubusercontent.com/tree-sitter/tree-sitter-rust/master/queries/highlights.scm",
+    ],
+  },
+}
+```
+
+```typescript Go
+const goParser = {
+  filetype: "go",
+  wasm: "https://github.com/tree-sitter/tree-sitter-go/releases/download/v0.23.4/tree-sitter-go.wasm",
+  queries: {
+    highlights: [
+      "https://raw.githubusercontent.com/tree-sitter/tree-sitter-go/master/queries/highlights.scm",
+    ],
+  },
+}
+```
+
+```typescript TypeScript
+const typescriptParser = {
+  filetype: "typescript",
+  wasm: "https://github.com/tree-sitter/tree-sitter-typescript/releases/download/v0.23.2/tree-sitter-typescript.wasm",
+  queries: {
+    highlights: [
+      // Base ECMAScript/JavaScript queries
+      "https://raw.githubusercontent.com/nvim-treesitter/nvim-treesitter/master/queries/ecma/highlights.scm",
+      // TypeScript-specific queries
+      "https://raw.githubusercontent.com/nvim-treesitter/nvim-treesitter/master/queries/typescript/highlights.scm",
+    ],
+  },
+}
+```
+
+</CodeGroup>
+
+### Pattern for Finding Parsers
+
+```typescript
+// Official parsers follow this pattern:
+const parserUrl = `https://github.com/tree-sitter/tree-sitter-${language}/releases/download/v${version}/tree-sitter-${language}.wasm`
+
+// Queries are usually in the queries/ directory:
+const queryUrl = `https://raw.githubusercontent.com/tree-sitter/tree-sitter-${language}/master/queries/highlights.scm`
+
+// Or from nvim-treesitter (often more comprehensive):
+const nvimQueryUrl = `https://raw.githubusercontent.com/nvim-treesitter/nvim-treesitter/master/queries/${language}/highlights.scm`
+```
+
+## Using Local Files
+
+For better performance and offline support, bundle parsers with your app:
+
+```typescript
+// Using Bun's file import
+import pythonWasm from "./parsers/tree-sitter-python.wasm" with { type: "file" }
+import pythonHighlights from "./queries/python/highlights.scm" with { type: "file" }
+
+addDefaultParsers([
+  {
+    filetype: "python",
+    wasm: pythonWasm,
+    queries: {
+      highlights: [pythonHighlights],
+    },
+  },
+])
+```
+
+## Automated Parser Management
+
+Automate parser downloads and configuration:
+
+<Steps>
+
+### Create Parser Configuration
+
+Create `parsers-config.json`:
+
+```json
+{
+  "parsers": [
+    {
+      "filetype": "python",
+      "wasm": "https://github.com/tree-sitter/tree-sitter-python/releases/download/v0.23.6/tree-sitter-python.wasm",
+      "queries": {
+        "highlights": [
+          "https://raw.githubusercontent.com/tree-sitter/tree-sitter-python/master/queries/highlights.scm"
+        ]
+      }
+    },
+    {
+      "filetype": "rust",
+      "wasm": "https://github.com/tree-sitter/tree-sitter-rust/releases/download/v0.23.2/tree-sitter-rust.wasm",
+      "queries": {
+        "highlights": [
+          "https://raw.githubusercontent.com/tree-sitter/tree-sitter-rust/master/queries/highlights.scm"
+        ]
+      }
+    }
+  ]
+}
+```
+
+### Add Build Script
+
+Update `package.json`:
+
+```json
+{
+  "scripts": {
+    "prebuild": "bun node_modules/@opentui/core/lib/tree-sitter/assets/update.ts --config ./parsers-config.json --assets ./src/parsers --output ./src/parsers.ts",
+    "build": "bun build ./src/index.ts"
+  }
+}
+```
+
+### Use Generated Parsers
+
+```typescript
+import { addDefaultParsers, getTreeSitterClient } from "@opentui/core"
+import { getParsers } from "./parsers" // Generated file
+
+addDefaultParsers(getParsers())
+
+const client = getTreeSitterClient()
+await client.initialize()
+
+const result = await client.highlightOnce(
+  'def hello():\n    print("world")',
+  "python"
+)
+```
+
+</Steps>
+
+## Syntax Styles
+
+Customize how syntax elements are colored:
+
+```typescript
+import { SyntaxStyle, RGBA } from "@opentui/core"
+
+const style = new SyntaxStyle()
+
+// Override default colors
+style.setColor("function", RGBA.fromHex("#61AFEF"))
+style.setColor("string", RGBA.fromHex("#98C379"))
+style.setColor("keyword", RGBA.fromHex("#C678DD"))
+style.setColor("comment", RGBA.fromHex("#5C6370"))
+style.setColor("variable", RGBA.fromHex("#E06C75"))
+style.setColor("number", RGBA.fromHex("#D19A66"))
+style.setColor("type", RGBA.fromHex("#E5C07B"))
+style.setColor("operator", RGBA.fromHex("#56B6C2"))
+
+// Use in CodeRenderable
+const codeBlock = new CodeRenderable(renderer, {
+  id: "code",
+  content: code,
+  filetype: "javascript",
+  syntaxStyle: style,
+})
+```
+
+## CodeRenderable
+
+The `CodeRenderable` component provides a full-featured code viewer:
+
+```typescript
+import { CodeRenderable } from "@opentui/core"
+
+const codeBlock = new CodeRenderable(renderer, {
+  id: "code-viewer",
+  content: `function fibonacci(n) {
+  if (n <= 1) return n
+  return fibonacci(n - 1) + fibonacci(n - 2)
+}`,
+  filetype: "javascript",
+  width: 50,
+  height: 15,
+  
+  // Styling
+  backgroundColor: "#1e1e1e",
+  padding: 1,
+  
+  // Line numbers
+  showLineNumbers: true,
+  lineNumberColor: "#858585",
+  
+  // Scrolling
+  scrollable: true,
+})
+
+renderer.root.add(codeBlock)
+
+// Update content
+codeBlock.content = "const x = 42;"
+
+// Change language
+codeBlock.filetype = "typescript"
+```
+
+## Filetype Detection
+
+Automatically detect filetype from file paths:
+
+```typescript
+import { pathToFiletype, extToFiletype } from "@opentui/core"
+
+// From file path
+const ft1 = pathToFiletype("src/main.rs")        // "rust"
+const ft2 = pathToFiletype("app.py")             // "python"
+const ft3 = pathToFiletype("index.tsx")          // "tsx"
+
+// From extension
+const ft4 = extToFiletype("ts")                  // "typescript"
+const ft5 = extToFiletype("js")                  // "javascript"
+const ft6 = extToFiletype("go")                  // "go"
+
+// Use in CodeRenderable
+const filePath = "src/utils.ts"
+const codeBlock = new CodeRenderable(renderer, {
+  id: "code",
+  content: fileContent,
+  filetype: pathToFiletype(filePath),
+})
+```
+
+Built-in mappings include:
+- `js`, `jsx` → javascript
+- `ts`, `tsx` → typescript
+- `py` → python
+- `rs` → rust
+- `go` → go
+- `rb` → ruby
+- `c`, `h` → c
+- `cpp`, `hpp`, `cc` → cpp
+- `html` → html
+- `css` → css
+- And many more
+
+## Complete Example: Code Viewer
+
+```typescript
+import {
+  createCliRenderer,
+  getTreeSitterClient,
+  addDefaultParsers,
+  CodeRenderable,
+  BoxRenderable,
+  TabSelectRenderable,
+  TabSelectRenderableEvents,
+  SyntaxStyle,
+  RGBA,
+} from "@opentui/core"
+import { readFileSync } from "fs"
+
+const renderer = await createCliRenderer({
+  exitOnCtrlC: true,
+})
+
+renderer.setBackgroundColor("#1e1e1e")
+
+// Add language support
+addDefaultParsers([
+  {
+    filetype: "python",
+    wasm: "https://github.com/tree-sitter/tree-sitter-python/releases/download/v0.23.6/tree-sitter-python.wasm",
+    queries: {
+      highlights: [
+        "https://raw.githubusercontent.com/tree-sitter/tree-sitter-python/master/queries/highlights.scm",
+      ],
+    },
+  },
+  {
+    filetype: "rust",
+    wasm: "https://github.com/tree-sitter/tree-sitter-rust/releases/download/v0.23.2/tree-sitter-rust.wasm",
+    queries: {
+      highlights: [
+        "https://raw.githubusercontent.com/tree-sitter/tree-sitter-rust/master/queries/highlights.scm",
+      ],
+    },
+  },
+])
+
+// Initialize Tree-sitter
+const client = getTreeSitterClient()
+await client.initialize()
+
+// Custom syntax style
+const syntaxStyle = new SyntaxStyle()
+syntaxStyle.setColor("function", RGBA.fromHex("#61AFEF"))
+syntaxStyle.setColor("string", RGBA.fromHex("#98C379"))
+syntaxStyle.setColor("keyword", RGBA.fromHex("#C678DD"))
+syntaxStyle.setColor("comment", RGBA.fromHex("#5C6370"))
+
+// Sample code files
+const files = [
+  {
+    name: "example.js",
+    content: `function fibonacci(n) {
+  if (n <= 1) return n
+  return fibonacci(n - 1) + fibonacci(n - 2)
+}
+
+console.log(fibonacci(10))`,
+    filetype: "javascript",
+  },
+  {
+    name: "example.py",
+    content: `def fibonacci(n):
+    if n <= 1:
+        return n
+    return fibonacci(n - 1) + fibonacci(n - 2)
+
+print(fibonacci(10))`,
+    filetype: "python",
+  },
+  {
+    name: "example.rs",
+    content: `fn fibonacci(n: u32) -> u32 {
+    match n {
+        0 | 1 => n,
+        _ => fibonacci(n - 1) + fibonacci(n - 2)
+    }
+}
+
+fn main() {
+    println!("{}", fibonacci(10));
+}`,
+    filetype: "rust",
+  },
+]
+
+let currentFileIndex = 0
+
+// Tab selector
+const tabs = new TabSelectRenderable(renderer, {
+  id: "tabs",
+  width: "auto",
+  height: 3,
+  options: files.map(f => ({ name: f.name })),
+  tabWidth: 20,
+})
+
+// Code viewer container
+const container = new BoxRenderable(renderer, {
+  id: "container",
+  width: "auto",
+  height: "auto",
+  flexGrow: 1,
+})
+
+// Code viewer
+const codeBlock = new CodeRenderable(renderer, {
+  id: "code-viewer",
+  content: files[0].content,
+  filetype: files[0].filetype,
+  width: "auto",
+  height: "auto",
+  backgroundColor: "#1e1e1e",
+  showLineNumbers: true,
+  lineNumberColor: "#858585",
+  syntaxStyle,
+})
+
+container.add(codeBlock)
+
+// Tab selection handler
+tabs.on(TabSelectRenderableEvents.ITEM_SELECTED, (index) => {
+  currentFileIndex = index
+  const file = files[index]
+  codeBlock.content = file.content
+  codeBlock.filetype = file.filetype
+})
+
+renderer.root.add(tabs)
+renderer.root.add(container)
+
+tabs.focus()
+renderer.start()
+```
+
+## Caching
+
+Parsers and queries are automatically cached to avoid re-downloading:
+
+```typescript
+const client = new TreeSitterClient({
+  dataPath: "./my-custom-cache", // Custom cache directory
+})
+```
+
+Cache directory structure:
+```
+my-custom-cache/
+  ├── parsers/
+  │   ├── tree-sitter-python.wasm
+  │   └── tree-sitter-rust.wasm
+  └── queries/
+      ├── python/
+      │   └── highlights.scm
+      └── rust/
+          └── highlights.scm
+```
+
+## Performance Tips
+
+<AccordionGroup>
+  <Accordion title="Initialize Once">
+    Initialize the Tree-sitter client once at app startup:
+    
+    ```typescript
+    const client = getTreeSitterClient()
+    await client.initialize() // Only once
+    
+    // Reuse for all highlighting
+    await client.highlightOnce(code1, "javascript")
+    await client.highlightOnce(code2, "python")
+    ```
+  </Accordion>
+  
+  <Accordion title="Use Local Files in Production">
+    Bundle parsers to avoid network requests:
+    
+    ```typescript
+    import pythonWasm from "./parsers/python.wasm" with { type: "file" }
+    
+    addDefaultParsers([{
+      filetype: "python",
+      wasm: pythonWasm,
+      queries: { highlights: [pythonHighlights] },
+    }])
+    ```
+  </Accordion>
+  
+  <Accordion title="Limit Language Support">
+    Only include parsers you need:
+    
+    ```typescript
+    // Only add JavaScript and TypeScript
+    // (built-in, no need to add manually)
+    // Don't add 20 languages if you only use 2
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Parser Not Found">
+    Make sure the parser is added before using:
+    
+    ```typescript
+    addDefaultParsers([pythonParser])
+    const client = getTreeSitterClient()
+    await client.initialize() // Must initialize after adding
+    ```
+  </Accordion>
+  
+  <Accordion title="No Syntax Highlighting">
+    Check that:
+    1. Client is initialized: `await client.initialize()`
+    2. Filetype is correct: `filetype: "javascript"` not `"js"`
+    3. Parser is added for that filetype
+  </Accordion>
+  
+  <Accordion title="Download Failures">
+    If parsers fail to download:
+    1. Check internet connection
+    2. Verify URLs are correct
+    3. Use local files instead of URLs
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Building Your First App" icon="rocket" href="/guides/building-your-first-app">
+    Build a complete TUI application
+  </Card>
+  <Card title="Styling and Colors" icon="palette" href="/guides/styling-and-colors">
+    Master colors and text styling
+  </Card>
+</CardGroup>

@@ -1,0 +1,317 @@
+---
+title: Input
+description: A single-line text input component for capturing user text input
+---
+
+## Overview
+
+The `InputRenderable` component provides a single-line text input field with support for placeholders, validation, and keyboard navigation. It extends `TextareaRenderable` with single-line constraints.
+
+## Basic Usage
+
+```typescript
+import { Screen, InputRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const input = new InputRenderable(ctx, {
+  x: 5,
+  y: 5,
+  width: 30,
+  value: "",
+  placeholder: "Enter your name...",
+})
+
+input.on("change", (value) => {
+  console.log("Value changed:", value)
+})
+
+input.on("enter", (value) => {
+  console.log("Form submitted:", value)
+})
+
+screen.append(input)
+```
+
+## Props
+
+<ParamField path="value" type="string" default="''">
+  Initial text value (newlines are automatically stripped)
+</ParamField>
+
+<ParamField path="placeholder" type="string" default="''">
+  Placeholder text shown when input is empty
+</ParamField>
+
+<ParamField path="maxLength" type="number" default="1000">
+  Maximum number of characters allowed
+</ParamField>
+
+<ParamField path="backgroundColor" type="ColorInput" default="'transparent'">
+  Background color when unfocused
+</ParamField>
+
+<ParamField path="textColor" type="ColorInput" default="'#FFFFFF'">
+  Text color when unfocused
+</ParamField>
+
+<ParamField path="focusedBackgroundColor" type="ColorInput" default="'transparent'">
+  Background color when focused
+</ParamField>
+
+<ParamField path="focusedTextColor" type="ColorInput" default="'#FFFFFF'">
+  Text color when focused
+</ParamField>
+
+<ParamField path="placeholderColor" type="ColorInput" default="'#666666'">
+  Color of placeholder text
+</ParamField>
+
+<ParamField path="keyBindings" type="InputKeyBinding[]">
+  Custom key bindings (inherits from TextareaRenderable)
+</ParamField>
+
+<ParamField path="keyAliasMap" type="KeyAliasMap">
+  Custom key aliases for remapping keyboard shortcuts
+</ParamField>
+
+## Events
+
+### input
+
+Fired on every character change (insertion or deletion).
+
+```typescript
+input.on("input", (value: string) => {
+  console.log("Current value:", value)
+})
+```
+
+### change
+
+Fired when the input loses focus or when Enter is pressed, if the value has changed since focus.
+
+```typescript
+input.on("change", (value: string) => {
+  console.log("Value committed:", value)
+})
+```
+
+### enter
+
+Fired when the Enter key is pressed.
+
+```typescript
+input.on("enter", (value: string) => {
+  console.log("Form submitted with:", value)
+})
+```
+
+## Methods
+
+### value
+
+Get or set the input value programmatically.
+
+```typescript
+// Get value
+const currentValue = input.value
+
+// Set value
+input.value = "New text"
+```
+
+### maxLength
+
+Get or set the maximum character limit.
+
+```typescript
+input.maxLength = 50
+```
+
+### placeholder
+
+Get or set the placeholder text.
+
+```typescript
+input.placeholder = "Enter email address"
+```
+
+### focus()
+
+Programmatically focus the input.
+
+```typescript
+input.focus()
+```
+
+### blur()
+
+Programmatically blur the input.
+
+```typescript
+input.blur()
+```
+
+## Behavior
+
+- **Single-line only**: Height is always 1, newlines are stripped from pasted or typed text
+- **Enter key**: Submits the form (fires `enter` event) instead of inserting a newline
+- **Text wrapping**: Disabled (wrapMode is set to "none")
+- **Undo/Redo**: Full undo/redo support inherited from TextareaRenderable
+- **Selection**: Text selection is supported with shift + arrow keys
+
+## Keyboard Shortcuts
+
+Inherits all keyboard shortcuts from TextareaRenderable:
+
+| Key | Action |
+|-----|--------|
+| `Enter` | Submit (fires enter event) |
+| `←` / `→` | Move cursor left/right |
+| `Ctrl+A` / `Cmd+A` | Move to start of line |
+| `Ctrl+E` / `Cmd+E` | Move to end of line |
+| `Ctrl+W` / `Option+Backspace` | Delete word backward |
+| `Ctrl+K` | Delete to end of line |
+| `Ctrl+U` | Delete to start of line |
+| `Backspace` / `Delete` | Delete character |
+| `Ctrl+Z` / `Cmd+Z` | Undo |
+| `Ctrl+.` / `Cmd+Shift+Z` | Redo |
+| `Shift+←` / `Shift+→` | Select text |
+
+## Examples
+
+### Login Form
+
+```typescript
+import { Screen, InputRenderable, TextRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+// Username label
+const usernameLabel = new TextRenderable(ctx, {
+  x: 5,
+  y: 5,
+  text: "Username:",
+})
+
+// Username input
+const usernameInput = new InputRenderable(ctx, {
+  x: 5,
+  y: 6,
+  width: 30,
+  placeholder: "Enter username",
+  focusedBackgroundColor: "#1a1a1a",
+})
+
+// Password label
+const passwordLabel = new TextRenderable(ctx, {
+  x: 5,
+  y: 8,
+  text: "Password:",
+})
+
+// Password input
+const passwordInput = new InputRenderable(ctx, {
+  x: 5,
+  y: 9,
+  width: 30,
+  placeholder: "Enter password",
+  focusedBackgroundColor: "#1a1a1a",
+})
+
+usernameInput.on("enter", () => {
+  passwordInput.focus()
+})
+
+passwordInput.on("enter", (password) => {
+  console.log("Login:", {
+    username: usernameInput.value,
+    password: password,
+  })
+})
+
+screen.append(usernameLabel, usernameInput, passwordLabel, passwordInput)
+usernameInput.focus()
+```
+
+### Character Counter
+
+```typescript
+import { Screen, InputRenderable, TextRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const maxChars = 50
+
+const input = new InputRenderable(ctx, {
+  x: 5,
+  y: 5,
+  width: 40,
+  maxLength: maxChars,
+  placeholder: "Type something...",
+})
+
+const counter = new TextRenderable(ctx, {
+  x: 5,
+  y: 6,
+  text: `0/${maxChars}`,
+  textColor: "#888888",
+})
+
+input.on("input", (value) => {
+  const remaining = maxChars - value.length
+  counter.text = `${value.length}/${maxChars}`
+  counter.textColor = remaining < 10 ? "#FF6666" : "#888888"
+})
+
+screen.append(input, counter)
+input.focus()
+```
+
+### Validated Input
+
+```typescript
+import { Screen, InputRenderable, TextRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const emailInput = new InputRenderable(ctx, {
+  x: 5,
+  y: 5,
+  width: 40,
+  placeholder: "Enter email address",
+})
+
+const errorMessage = new TextRenderable(ctx, {
+  x: 5,
+  y: 6,
+  text: "",
+  textColor: "#FF6666",
+})
+
+function validateEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+emailInput.on("change", (value) => {
+  if (value && !validateEmail(value)) {
+    errorMessage.text = "Invalid email address"
+  } else {
+    errorMessage.text = ""
+  }
+})
+
+screen.append(emailInput, errorMessage)
+emailInput.focus()
+```
+
+## Related Components
+
+- [Textarea](/components/textarea) - Multi-line text input
+- [Select](/components/select) - Dropdown selection
+- [Slider](/components/slider) - Numeric range input

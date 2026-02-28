@@ -1,0 +1,191 @@
+---
+title: Text
+description: Display plain or styled text content with text wrapping, selection, and text node composition
+---
+
+## Overview
+
+The `TextRenderable` component displays text content in your terminal UI. It supports styled text with colors and attributes, text wrapping modes, text selection, and dynamic composition using TextNodes.
+
+## Basic Usage
+
+```typescript
+import { TextRenderable } from "@opentui/core"
+
+const text = new TextRenderable(renderer, {
+  content: "Hello, World!",
+  fg: "#E6EDF3",
+  width: "100%",
+})
+```
+
+## Props
+
+<ParamField path="content" type="string | StyledText">
+  Text content to display. Can be a plain string or a StyledText object with inline styling.
+</ParamField>
+
+<ParamField path="fg" type="string | RGBA">
+  Foreground color for the text (e.g., `"#FF0000"` or `"red"`).
+</ParamField>
+
+<ParamField path="bg" type="string | RGBA">
+  Background color for the text.
+</ParamField>
+
+<ParamField path="wrapMode" type="'none' | 'char' | 'word'" default="'none'">
+  Text wrapping behavior:
+  - `'none'`: No wrapping, text extends beyond bounds
+  - `'char'`: Wrap at any character
+  - `'word'`: Wrap at word boundaries
+</ParamField>
+
+<ParamField path="selectable" type="boolean" default="false">
+  Enable text selection with mouse or keyboard.
+</ParamField>
+
+<ParamField path="selectionBg" type="string | RGBA">
+  Background color for selected text.
+</ParamField>
+
+<ParamField path="selectionFg" type="string | RGBA">
+  Foreground color for selected text.
+</ParamField>
+
+<ParamField path="truncate" type="boolean" default="false">
+  Enable middle truncation with ellipsis when text exceeds available width.
+</ParamField>
+
+<ParamField path="width" type="number | string">
+  Width of the text container. Accepts numbers (pixels) or strings like `"100%"` or `"50%"`.
+</ParamField>
+
+<ParamField path="height" type="number | string">
+  Height of the text container.
+</ParamField>
+
+## Methods
+
+### add()
+
+Add a TextNode or string to the text content.
+
+```typescript
+const boldNode = TextNodeRenderable.fromString("Bold text", {
+  attributes: 1, // bold
+})
+text.add(boldNode)
+```
+
+### remove()
+
+Remove a TextNode by ID.
+
+```typescript
+text.remove(node.id)
+```
+
+### clear()
+
+Clear all content.
+
+```typescript
+text.clear()
+```
+
+## Examples
+
+### Styled Text
+
+```typescript
+import { stringToStyledText } from "@opentui/core"
+
+const styledContent = stringToStyledText("Styled text")
+const text = new TextRenderable(renderer, {
+  content: styledContent,
+  width: "100%",
+})
+```
+
+### Word Wrapping
+
+```typescript
+const text = new TextRenderable(renderer, {
+  content: "This is a long text that will wrap at word boundaries when it exceeds the available width.",
+  wrapMode: "word",
+  width: 40,
+})
+```
+
+### Selectable Text
+
+```typescript
+const text = new TextRenderable(renderer, {
+  content: "You can select this text with your mouse or keyboard",
+  selectable: true,
+  selectionBg: "#264F78",
+  selectionFg: "#FFFFFF",
+  width: "100%",
+})
+```
+
+### Dynamic Composition with TextNodes
+
+```typescript
+import { TextNodeRenderable, bold, green, yellow, cyan } from "@opentui/core"
+
+const text = new TextRenderable(renderer, {
+  width: 60,
+})
+
+// Add dynamically styled content
+text.add(TextNodeRenderable.fromString("Status: ", { fg: "#888888" }))
+text.add(TextNodeRenderable.fromString("Active", { fg: "#22c55e", attributes: 1 }))
+```
+
+### Using Helper Functions
+
+```typescript
+import { t, bold, underline, green, yellow, cyan } from "@opentui/core"
+
+const text = new TextRenderable(renderer, {
+  content: t`${bold(cyan("TextNode Demo"))}
+${yellow("•")} Press ${green("1-4")} to see different examples
+${yellow("•")} Press ${green("ESC")} to exit
+
+${underline("Current:")} Example 1 - Basic TextNode Creation`,
+})
+```
+
+## Properties
+
+### content
+
+Get or set the text content.
+
+```typescript
+text.content = "New content"
+console.log(text.content) // StyledText object
+```
+
+### chunks
+
+Access the underlying styled text chunks.
+
+```typescript
+const chunks = text.chunks // TextChunk[]
+```
+
+### textNode
+
+Access the root TextNode for advanced composition.
+
+```typescript
+const rootNode = text.textNode // RootTextNodeRenderable
+```
+
+## Related Components
+
+- [TextNode](/components/textnode) - Rich text composition with nested styling
+- [Code](/components/code) - Syntax-highlighted code display
+- [Markdown](/components/markdown) - Markdown rendering

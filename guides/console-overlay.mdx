@@ -1,0 +1,502 @@
+---
+title: Console Overlay
+description: Built-in debugging console for capturing logs and inspecting your TUI app
+---
+
+OpenTUI includes a powerful built-in console overlay that captures all console output (`console.log`, `console.info`, `console.warn`, `console.error`, `console.debug`) and displays it in a visual overlay without disrupting your main interface.
+
+## Quick Start
+
+The console is automatically available in every OpenTUI application. Press `` ` `` (backtick) to toggle it.
+
+```typescript
+import { createCliRenderer } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+// Console is ready - just use it!
+console.log("This appears in the overlay")
+console.error("Errors are color-coded red")
+console.warn("Warnings appear in yellow")
+
+// Toggle console with backtick or programmatically
+renderer.console.toggle()
+```
+
+## Configuration
+
+Customize the console when creating the renderer:
+
+```typescript
+import { createCliRenderer, ConsolePosition } from "@opentui/core"
+
+const renderer = await createCliRenderer({
+  consoleOptions: {
+    position: ConsolePosition.BOTTOM,    // TOP, BOTTOM, LEFT, or RIGHT
+    sizePercent: 30,                     // 30% of terminal size
+    colorInfo: "#00FFFF",                // Cyan for info messages
+    colorWarn: "#FFFF00",                // Yellow for warnings
+    colorError: "#FF0000",               // Red for errors
+    colorDebug: "#808080",               // Gray for debug
+    colorDefault: "#FFFFFF",             // White for log
+    backgroundColor: "rgba(0.1, 0.1, 0.1, 0.7)", // Semi-transparent background
+    titleBarColor: "rgba(0.05, 0.05, 0.05, 0.7)",
+    titleBarTextColor: "#FFFFFF",
+    title: "Debug Console",
+    startInDebugMode: false,             // Show caller info
+    maxStoredLogs: 2000,                 // Max logs to keep
+    maxDisplayLines: 3000,               // Max lines to display
+  },
+})
+```
+
+## Console Positions
+
+The console can be positioned at any edge:
+
+<Tabs>
+  <Tab title="Bottom (Default)">
+    ```typescript
+    import { ConsolePosition } from "@opentui/core"
+    
+    const renderer = await createCliRenderer({
+      consoleOptions: {
+        position: ConsolePosition.BOTTOM,
+        sizePercent: 30,
+      },
+    })
+    ```
+    
+    Best for most applications - doesn't interfere with typical layouts.
+  </Tab>
+  
+  <Tab title="Top">
+    ```typescript
+    const renderer = await createCliRenderer({
+      consoleOptions: {
+        position: ConsolePosition.TOP,
+        sizePercent: 25,
+      },
+    })
+    ```
+    
+    Useful for applications with important footer information.
+  </Tab>
+  
+  <Tab title="Left">
+    ```typescript
+    const renderer = await createCliRenderer({
+      consoleOptions: {
+        position: ConsolePosition.LEFT,
+        sizePercent: 40,
+      },
+    })
+    ```
+    
+    Good for wide terminals with horizontal layouts.
+  </Tab>
+  
+  <Tab title="Right">
+    ```typescript
+    const renderer = await createCliRenderer({
+      consoleOptions: {
+        position: ConsolePosition.RIGHT,
+        sizePercent: 40,
+      },
+    })
+    ```
+    
+    Ideal for sidebar-style debugging.
+  </Tab>
+</Tabs>
+
+## Keyboard Controls
+
+When the console is focused, you can navigate and control it:
+
+| Key | Action |
+|-----|--------|
+| `` ` `` | Toggle console (show/hide/focus) |
+| `↑` / `↓` | Scroll up/down one line |
+| `Shift+↑` | Jump to top |
+| `Shift+↓` | Jump to bottom |
+| `Ctrl+P` | Move to previous position (top → right → bottom → left) |
+| `Ctrl+O` | Move to next position |
+| `+` or `Shift+=` | Increase console size |
+| `-` | Decrease console size |
+| `Ctrl+S` | Save logs to file |
+| `Ctrl+Shift+C` | Copy selected text (if selection exists) |
+| `Escape` | Unfocus console (keep visible) |
+
+## Programmatic Control
+
+### Show, Hide, and Toggle
+
+```typescript
+// Show console
+renderer.console.show()
+
+// Hide console
+renderer.console.hide()
+
+// Toggle (show if hidden, focus if visible but not focused, hide if focused)
+renderer.console.toggle()
+
+// Focus console
+renderer.console.focus()
+
+// Unfocus console
+renderer.console.blur()
+
+// Check visibility
+if (renderer.console.visible) {
+  console.log("Console is visible")
+}
+```
+
+### Clear Console
+
+```typescript
+// Clear all console logs
+renderer.console.clear()
+```
+
+## Log Levels and Colors
+
+Different log levels are automatically color-coded:
+
+<CodeGroup>
+
+```typescript console.log (Default)
+console.log("Regular message")
+console.log("Data:", { key: "value" })
+console.log("Multiple", "arguments", 123)
+// Color: White (colorDefault)
+```
+
+```typescript console.info (Cyan)
+console.info("Informational message")
+console.info("Server started on port 3000")
+// Color: Cyan (colorInfo)
+```
+
+```typescript console.warn (Yellow)
+console.warn("Warning message")
+console.warn("API rate limit approaching")
+// Color: Yellow (colorWarn)
+```
+
+```typescript console.error (Red)
+console.error("Error message")
+console.error("Failed to connect:", error)
+// Color: Red (colorError)
+```
+
+```typescript console.debug (Gray)
+console.debug("Debug message")
+console.debug("Cache hit:", cacheKey)
+// Color: Gray (colorDebug)
+```
+
+</CodeGroup>
+
+## Debug Mode
+
+Enable debug mode to show caller information (file name, line number) with each log:
+
+```typescript
+const renderer = await createCliRenderer({
+  consoleOptions: {
+    startInDebugMode: true,
+  },
+})
+
+// Or toggle at runtime
+renderer.console.setDebugMode(true)
+renderer.console.toggleDebugMode()
+```
+
+With debug mode enabled:
+
+```
+[12:34:56] [LOG] [app.ts:42] User logged in
+[12:34:57] [ERROR] [database.ts:128] Connection failed
+```
+
+## Text Selection and Copy
+
+Select text in the console with mouse drag or keyboard, then copy it:
+
+### Mouse Selection
+
+1. Click and drag to select text
+2. Click the `[Copy]` button or press `Ctrl+Shift+C`
+
+### Custom Copy Handler
+
+Handle the copy action yourself (e.g., to copy to system clipboard):
+
+```typescript
+renderer.console.onCopySelection = (text: string) => {
+  // Copy to clipboard using OSC 52 (works over SSH)
+  const success = renderer.copyToClipboardOSC52(text)
+  
+  if (success) {
+    console.info(`Copied ${text.length} characters to clipboard`)
+  } else {
+    console.warn("Clipboard copy not supported")
+  }
+}
+```
+
+### Custom Key Bindings
+
+Customize the copy shortcut:
+
+```typescript
+renderer.console.keyBindings = [
+  { name: "y", ctrl: true, action: "copy-selection" },
+]
+```
+
+## Saving Logs
+
+Save console output to a file:
+
+```typescript
+// Press Ctrl+S when console is focused
+// Or programmatically:
+
+import { writeFileSync } from "fs"
+
+const logs = renderer.console.getCachedLogs()
+writeFileSync("console.log", logs)
+console.info("Logs saved to console.log")
+```
+
+Saved logs include timestamps and log levels:
+
+```
+2024-01-15T12:34:56.789Z [LOG] Application started
+2024-01-15T12:34:57.123Z [INFO] Connected to database
+2024-01-15T12:35:00.456Z [WARN] Cache miss for key: user:123
+```
+
+## Environment Variables
+
+Control console behavior via environment variables:
+
+```bash
+# Disable console capture
+OTUI_USE_CONSOLE=false bun app.ts
+
+# Show console at startup
+SHOW_CONSOLE=true bun app.ts
+```
+
+```typescript
+import { env } from "@opentui/core"
+
+if (env.SHOW_CONSOLE) {
+  renderer.console.show()
+}
+```
+
+## Advanced: Custom Key Bindings
+
+Completely customize console keyboard controls:
+
+```typescript
+import type { ConsoleKeyBinding } from "@opentui/core"
+
+const customBindings: ConsoleKeyBinding[] = [
+  // Vim-style navigation
+  { name: "k", action: "scroll-up" },
+  { name: "j", action: "scroll-down" },
+  { name: "g", shift: true, action: "scroll-to-bottom" },
+  
+  // Custom shortcuts
+  { name: "y", ctrl: true, action: "copy-selection" },
+  { name: "w", ctrl: true, action: "save-logs" },
+]
+
+renderer.console.keyBindings = customBindings
+```
+
+Available actions:
+- `scroll-up` - Scroll up one line
+- `scroll-down` - Scroll down one line
+- `scroll-to-top` - Jump to top
+- `scroll-to-bottom` - Jump to bottom
+- `position-previous` - Move to previous edge
+- `position-next` - Move to next edge
+- `size-increase` - Make console larger
+- `size-decrease` - Make console smaller
+- `save-logs` - Save logs to file
+- `copy-selection` - Copy selected text
+
+## Complete Example
+
+```typescript
+import { createCliRenderer, ConsolePosition, BoxRenderable, TextRenderable } from "@opentui/core"
+
+const renderer = await createCliRenderer({
+  exitOnCtrlC: true,
+  consoleOptions: {
+    position: ConsolePosition.BOTTOM,
+    sizePercent: 35,
+    colorInfo: "#00FFFF",
+    colorWarn: "#FFFF00",
+    colorError: "#FF0000",
+    colorDebug: "#808080",
+    title: "Debug Console",
+    startInDebugMode: true,
+  },
+})
+
+renderer.setBackgroundColor("#001122")
+
+// Setup copy handler
+renderer.console.onCopySelection = (text: string) => {
+  renderer.copyToClipboardOSC52(text)
+  console.info(`Copied: "${text.substring(0, 50)}..."")`)
+}
+
+// Custom key bindings
+renderer.console.keyBindings = [
+  { name: "y", ctrl: true, action: "copy-selection" },
+]
+
+// Show console at startup
+renderer.console.show()
+
+// Create UI
+const header = new BoxRenderable(renderer, {
+  id: "header",
+  height: 3,
+  backgroundColor: "#3b82f6",
+  borderStyle: "single",
+  alignItems: "center",
+})
+
+const title = new TextRenderable(renderer, {
+  id: "title",
+  content: "CONSOLE DEMO - Press ` to toggle console",
+  fg: "#FFFFFF",
+})
+
+header.add(title)
+renderer.root.add(header)
+
+// Log some messages
+console.log("Application started")
+console.info("Console overlay is ready")
+console.warn("This is a warning")
+console.debug("Debug info:", { timestamp: Date.now() })
+
+renderer.start()
+
+// Simulate periodic logging
+let counter = 0
+setInterval(() => {
+  counter++
+  console.log(`Update #${counter}`, { time: new Date().toISOString() })
+  
+  if (counter % 5 === 0) {
+    console.info(`Milestone reached: ${counter}`)
+  }
+  
+  if (counter === 10) {
+    console.warn("Counter approaching limit")
+  }
+  
+  if (counter > 15) {
+    console.error("Counter exceeded limit!", { counter, limit: 15 })
+  }
+}, 2000)
+```
+
+## Performance Tips
+
+<AccordionGroup>
+  <Accordion title="Limit Log Retention">
+    Set reasonable limits for stored logs:
+    
+    ```typescript
+    const renderer = await createCliRenderer({
+      consoleOptions: {
+        maxStoredLogs: 1000,   // Keep last 1000 log entries
+        maxDisplayLines: 2000, // Display max 2000 lines
+      },
+    })
+    ```
+  </Accordion>
+  
+  <Accordion title="Disable When Not Needed">
+    Disable console capture in production:
+    
+    ```bash
+    # In production
+    OTUI_USE_CONSOLE=false bun app.ts
+    ```
+  </Accordion>
+  
+  <Accordion title="Use Debug Mode Sparingly">
+    Debug mode collects stack traces which adds overhead:
+    
+    ```typescript
+    // Enable only when debugging
+    if (process.env.NODE_ENV === "development") {
+      renderer.console.setDebugMode(true)
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Console Not Showing">
+    Check if console is enabled:
+    
+    ```typescript
+    // Activate console capture
+    renderer.console.activate()
+    
+    // Show console
+    renderer.console.show()
+    ```
+  </Accordion>
+  
+  <Accordion title="Logs Not Appearing">
+    Ensure you're using console methods after renderer is created:
+    
+    ```typescript
+    const renderer = await createCliRenderer()
+    
+    // Now console.log will be captured
+    console.log("This works!")
+    ```
+  </Accordion>
+  
+  <Accordion title="Can't Copy Text">
+    Provide a copy handler:
+    
+    ```typescript
+    renderer.console.onCopySelection = (text) => {
+      renderer.copyToClipboardOSC52(text)
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Animations" icon="wand-magic-sparkles" href="/guides/animations">
+    Add smooth animations to your app
+  </Card>
+  <Card title="3D Rendering" icon="cube" href="/guides/3d-rendering">
+    Render 3D graphics with WebGPU
+  </Card>
+</CardGroup>

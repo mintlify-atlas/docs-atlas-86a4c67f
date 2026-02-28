@@ -1,0 +1,444 @@
+---
+title: "TextBuffer"
+description: "A high-performance text storage and rendering buffer with support for styling, syntax highlighting, and Unicode."
+---
+
+## Overview
+
+The `TextBuffer` class provides efficient text storage with support for styled text, syntax highlighting, and grapheme-aware operations. It handles text rendering with Unicode support and manages highlights for code or text display.
+
+## Constructor
+
+<ParamField path="lib" type="RenderLib" required>
+  The render library instance.
+</ParamField>
+
+<ParamField path="ptr" type="Pointer" required>
+  Pointer to the native buffer.
+</ParamField>
+
+## Static Methods
+
+### create
+
+Creates a new TextBuffer instance.
+
+```typescript
+static create(widthMethod: WidthMethod): TextBuffer
+```
+
+<ParamField path="widthMethod" type="WidthMethod" required>
+  The width calculation method for character rendering.
+</ParamField>
+
+<ResponseField name="return" type="TextBuffer">
+  A new TextBuffer instance.
+</ResponseField>
+
+## Properties
+
+### length
+
+```typescript
+get length(): number
+```
+
+<ResponseField name="length" type="number">
+  The character length of the text in the buffer.
+</ResponseField>
+
+### byteSize
+
+```typescript
+get byteSize(): number
+```
+
+<ResponseField name="byteSize" type="number">
+  The byte size of the text in the buffer.
+</ResponseField>
+
+### ptr
+
+```typescript
+get ptr(): Pointer
+```
+
+<ResponseField name="ptr" type="Pointer">
+  The native pointer to the buffer.
+</ResponseField>
+
+## Text Operations
+
+### setText
+
+Sets the entire text content of the buffer.
+
+```typescript
+setText(text: string): void
+```
+
+<ParamField path="text" type="string" required>
+  The text content to set.
+</ParamField>
+
+### append
+
+Appends text to the end of the buffer.
+
+```typescript
+append(text: string): void
+```
+
+<ParamField path="text" type="string" required>
+  The text to append.
+</ParamField>
+
+### loadFile
+
+Loads text content from a file.
+
+```typescript
+loadFile(path: string): void
+```
+
+<ParamField path="path" type="string" required>
+  The file path to load.
+</ParamField>
+
+### setStyledText
+
+Sets styled text with formatting.
+
+```typescript
+setStyledText(text: StyledText): void
+```
+
+<ParamField path="text" type="StyledText" required>
+  Styled text with formatting chunks.
+</ParamField>
+
+### getPlainText
+
+Retrieves the plain text content without styling.
+
+```typescript
+getPlainText(): string
+```
+
+<ResponseField name="return" type="string">
+  The plain text content.
+</ResponseField>
+
+### getTextRange
+
+Retrieves a range of text by character offsets.
+
+```typescript
+getTextRange(startOffset: number, endOffset: number): string
+```
+
+<ParamField path="startOffset" type="number" required>
+  The starting character offset.
+</ParamField>
+
+<ParamField path="endOffset" type="number" required>
+  The ending character offset.
+</ParamField>
+
+<ResponseField name="return" type="string">
+  The text in the specified range.
+</ResponseField>
+
+### getLineCount
+
+Gets the number of lines in the buffer.
+
+```typescript
+getLineCount(): number
+```
+
+<ResponseField name="return" type="number">
+  The number of lines.
+</ResponseField>
+
+## Styling
+
+### setDefaultFg
+
+Sets the default foreground color.
+
+```typescript
+setDefaultFg(fg: RGBA | null): void
+```
+
+<ParamField path="fg" type="RGBA | null" required>
+  The foreground color or null to clear.
+</ParamField>
+
+### setDefaultBg
+
+Sets the default background color.
+
+```typescript
+setDefaultBg(bg: RGBA | null): void
+```
+
+<ParamField path="bg" type="RGBA | null" required>
+  The background color or null to clear.
+</ParamField>
+
+### setDefaultAttributes
+
+Sets default text attributes (bold, italic, etc.).
+
+```typescript
+setDefaultAttributes(attributes: number | null): void
+```
+
+<ParamField path="attributes" type="number | null" required>
+  Bitfield of text attributes or null to clear.
+</ParamField>
+
+### resetDefaults
+
+Resets all default styling to original values.
+
+```typescript
+resetDefaults(): void
+```
+
+## Syntax Highlighting
+
+### setSyntaxStyle
+
+Sets the syntax highlighting style.
+
+```typescript
+setSyntaxStyle(style: SyntaxStyle | null): void
+```
+
+<ParamField path="style" type="SyntaxStyle | null" required>
+  The syntax style or null to disable.
+</ParamField>
+
+### getSyntaxStyle
+
+Gets the current syntax highlighting style.
+
+```typescript
+getSyntaxStyle(): SyntaxStyle | null
+```
+
+<ResponseField name="return" type="SyntaxStyle | null">
+  The current syntax style or null if none is set.
+</ResponseField>
+
+## Highlights
+
+### addHighlight
+
+Adds a highlight to a specific line by column positions.
+
+```typescript
+addHighlight(lineIdx: number, highlight: Highlight): void
+```
+
+<ParamField path="lineIdx" type="number" required>
+  The line index (0-based).
+</ParamField>
+
+<ParamField path="highlight" type="Highlight" required>
+  The highlight definition with start/end columns.
+</ParamField>
+
+### addHighlightByCharRange
+
+Adds a highlight using absolute character offsets.
+
+```typescript
+addHighlightByCharRange(highlight: Highlight): void
+```
+
+<ParamField path="highlight" type="Highlight" required>
+  The highlight definition with start/end character offsets.
+</ParamField>
+
+### removeHighlightsByRef
+
+Removes all highlights with a specific reference ID.
+
+```typescript
+removeHighlightsByRef(hlRef: number): void
+```
+
+<ParamField path="hlRef" type="number" required>
+  The highlight reference ID.
+</ParamField>
+
+### clearLineHighlights
+
+Clears all highlights on a specific line.
+
+```typescript
+clearLineHighlights(lineIdx: number): void
+```
+
+<ParamField path="lineIdx" type="number" required>
+  The line index (0-based).
+</ParamField>
+
+### clearAllHighlights
+
+Removes all highlights from the buffer.
+
+```typescript
+clearAllHighlights(): void
+```
+
+### getLineHighlights
+
+Retrieves all highlights for a specific line.
+
+```typescript
+getLineHighlights(lineIdx: number): Array<Highlight>
+```
+
+<ParamField path="lineIdx" type="number" required>
+  The line index (0-based).
+</ParamField>
+
+<ResponseField name="return" type="Array<Highlight>">
+  Array of highlights on the line.
+</ResponseField>
+
+### getHighlightCount
+
+Gets the total number of highlights in the buffer.
+
+```typescript
+getHighlightCount(): number
+```
+
+<ResponseField name="return" type="number">
+  The total highlight count.
+</ResponseField>
+
+## Configuration
+
+### setTabWidth
+
+Sets the display width of tab characters.
+
+```typescript
+setTabWidth(width: number): void
+```
+
+<ParamField path="width" type="number" required>
+  The tab width in columns.
+</ParamField>
+
+### getTabWidth
+
+Gets the current tab width setting.
+
+```typescript
+getTabWidth(): number
+```
+
+<ResponseField name="return" type="number">
+  The tab width in columns.
+</ResponseField>
+
+## Memory Management
+
+### clear
+
+Clears the buffer content but preserves internal state.
+
+```typescript
+clear(): void
+```
+
+### reset
+
+Resets the buffer to initial state, clearing all content and state.
+
+```typescript
+reset(): void
+```
+
+### destroy
+
+Destroys the buffer and frees native resources.
+
+```typescript
+destroy(): void
+```
+
+## Types
+
+### TextChunk
+
+```typescript
+interface TextChunk {
+  __isChunk: true
+  text: string
+  fg?: RGBA
+  bg?: RGBA
+  attributes?: number
+  link?: { url: string }
+}
+```
+
+<ParamField path="text" type="string" required>
+  The text content of the chunk.
+</ParamField>
+
+<ParamField path="fg" type="RGBA">
+  Foreground color for the chunk.
+</ParamField>
+
+<ParamField path="bg" type="RGBA">
+  Background color for the chunk.
+</ParamField>
+
+<ParamField path="attributes" type="number">
+  Text attributes bitfield (bold, italic, etc.).
+</ParamField>
+
+<ParamField path="link" type="{ url: string }">
+  Optional hyperlink URL.
+</ParamField>
+
+## Example
+
+```typescript
+import { TextBuffer } from "@opentui/core"
+
+// Create a text buffer
+const buffer = TextBuffer.create("wcwidth")
+
+// Set text content
+buffer.setText("Hello, World!\nWelcome to OpenTUI")
+
+// Get line count
+console.log(buffer.getLineCount()) // 2
+
+// Add syntax highlighting
+const style = SyntaxStyle.create("typescript")
+buffer.setSyntaxStyle(style)
+
+// Add a highlight
+buffer.addHighlight(0, {
+  start: 0,
+  end: 5,
+  fg: new RGBA(255, 0, 0, 255),
+  ref: 1
+})
+
+// Get plain text
+const text = buffer.getPlainText()
+
+// Clean up
+buffer.destroy()
+```

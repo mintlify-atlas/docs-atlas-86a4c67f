@@ -1,0 +1,775 @@
+---
+title: "3D Rendering API"
+description: "WebGPU-powered 3D rendering for terminal UIs using Three.js"
+---
+
+## Overview
+
+OpenTUI provides a complete 3D rendering system powered by WebGPU and Three.js, allowing you to render 3D scenes directly in terminal applications. The API includes support for textures, sprites, animations, and physics.
+
+## ThreeRenderable
+
+The main component for rendering 3D scenes in your terminal UI.
+
+### Constructor
+
+```typescript
+import { ThreeRenderable } from "@opentui/core"
+import { Scene, PerspectiveCamera } from "three"
+
+const scene = new Scene()
+const camera = new PerspectiveCamera(75, 16/9, 0.1, 1000)
+
+const renderable = new ThreeRenderable(ctx, {
+  scene,
+  camera,
+  renderer: {
+    backgroundColor: RGBA.fromValues(0, 0, 0, 1),
+    superSample: SuperSampleType.GPU,
+    alpha: false
+  },
+  autoAspect: true,
+  width: 80,
+  height: 40
+})
+```
+
+<ParamField path="ctx" type="RenderContext" required>
+  The render context (typically a CliRenderer instance)
+</ParamField>
+
+<ParamField path="options" type="ThreeRenderableOptions" required>
+  Configuration options
+  
+  <Expandable title="properties">
+    <ParamField path="scene" type="Scene | null">
+      Three.js scene to render
+    </ParamField>
+    
+    <ParamField path="camera" type="PerspectiveCamera | OrthographicCamera">
+      Camera to use for rendering
+    </ParamField>
+    
+    <ParamField path="renderer" type="ThreeCliRendererOptions">
+      Renderer configuration options
+      
+      <Expandable title="ThreeCliRendererOptions">
+        <ParamField path="backgroundColor" type="RGBA">
+          Background color for the scene
+        </ParamField>
+        
+        <ParamField path="superSample" type="SuperSampleType" default="SuperSampleType.GPU">
+          Anti-aliasing mode:
+          - `SuperSampleType.NONE` - No anti-aliasing
+          - `SuperSampleType.GPU` - GPU-based super sampling (fastest)
+          - `SuperSampleType.CPU` - CPU-based super sampling
+        </ParamField>
+        
+        <ParamField path="alpha" type="boolean" default="false">
+          Enable alpha channel transparency
+        </ParamField>
+        
+        <ParamField path="focalLength" type="number">
+          Camera focal length for perspective calculations
+        </ParamField>
+        
+        <ParamField path="libPath" type="string">
+          Path to native WebGPU library
+        </ParamField>
+      </Expandable>
+    </ParamField>
+    
+    <ParamField path="autoAspect" type="boolean" default="true">
+      Automatically adjust camera aspect ratio on resize
+    </ParamField>
+    
+    <ParamField path="width" type="number">
+      Width in terminal cells
+    </ParamField>
+    
+    <ParamField path="height" type="number">
+      Height in terminal cells
+    </ParamField>
+    
+    <ParamField path="live" type="boolean" default="true">
+      Enable live rendering mode
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+### Properties
+
+<ResponseField name="renderer" type="ThreeCliRenderer">
+  Access to the underlying renderer
+</ResponseField>
+
+<ResponseField name="aspectRatio" type="number">
+  Current aspect ratio of the render area
+</ResponseField>
+
+### Methods
+
+#### getScene()
+
+Gets the current scene.
+
+```typescript
+const scene = renderable.getScene()
+```
+
+<ResponseField name="scene" type="Scene | null">
+  The current Three.js scene
+</ResponseField>
+
+#### setScene()
+
+Sets a new scene to render.
+
+```typescript
+renderable.setScene(newScene)
+```
+
+<ParamField path="scene" type="Scene | null" required>
+  The new scene to render
+</ParamField>
+
+#### getActiveCamera()
+
+Gets the active camera.
+
+```typescript
+const camera = renderable.getActiveCamera()
+```
+
+<ResponseField name="camera" type="PerspectiveCamera | OrthographicCamera">
+  The active camera
+</ResponseField>
+
+#### setActiveCamera()
+
+Sets a new active camera.
+
+```typescript
+renderable.setActiveCamera(newCamera)
+```
+
+<ParamField path="camera" type="PerspectiveCamera | OrthographicCamera" required>
+  The new camera to use
+</ParamField>
+
+#### setAutoAspect()
+
+Enables or disables automatic aspect ratio adjustment.
+
+```typescript
+renderable.setAutoAspect(true)
+```
+
+<ParamField path="autoAspect" type="boolean" required>
+  Whether to automatically adjust aspect ratio
+</ParamField>
+
+## ThreeCliRenderer
+
+Low-level renderer for Three.js scenes.
+
+### Constructor
+
+```typescript
+import { ThreeCliRenderer, SuperSampleType } from "@opentui/core"
+
+const renderer = new ThreeCliRenderer(cliRenderer, {
+  width: 160,
+  height: 80,
+  superSample: SuperSampleType.GPU,
+  backgroundColor: RGBA.fromValues(0, 0, 0, 1),
+  alpha: false,
+  autoResize: true
+})
+```
+
+<ParamField path="cliRenderer" type="CliRenderer" required>
+  The CLI renderer instance
+</ParamField>
+
+<ParamField path="options" type="ThreeCliRendererOptions" required>
+  Renderer options (same as ThreeRenderable's renderer options, plus width/height/autoResize)
+</ParamField>
+
+### Methods
+
+#### init()
+
+Initializes the WebGPU renderer. Must be called before rendering.
+
+```typescript
+await renderer.init()
+```
+
+#### drawScene()
+
+Renders a scene to a buffer.
+
+```typescript
+await renderer.drawScene(scene, buffer, deltaTime)
+```
+
+<ParamField path="scene" type="Scene" required>
+  Scene to render
+</ParamField>
+
+<ParamField path="buffer" type="OptimizedBuffer" required>
+  Target buffer to render into
+</ParamField>
+
+<ParamField path="deltaTime" type="number" required>
+  Time elapsed since last frame in seconds
+</ParamField>
+
+#### setSize()
+
+Resizes the renderer.
+
+```typescript
+renderer.setSize(100, 50)
+```
+
+<ParamField path="width" type="number" required>
+  New width in cells
+</ParamField>
+
+<ParamField path="height" type="number" required>
+  New height in cells
+</ParamField>
+
+<ParamField path="forceUpdate" type="boolean" default="false">
+  Force resize even if dimensions haven't changed
+</ParamField>
+
+#### setBackgroundColor()
+
+Changes the background color.
+
+```typescript
+renderer.setBackgroundColor(RGBA.fromHex("#001122"))
+```
+
+<ParamField path="color" type="RGBA" required>
+  New background color
+</ParamField>
+
+#### saveToFile()
+
+Saves the current frame to an image file.
+
+```typescript
+await renderer.saveToFile("/path/to/screenshot.png")
+```
+
+<ParamField path="filePath" type="string" required>
+  Path where the image should be saved
+</ParamField>
+
+#### toggleSuperSampling()
+
+Cycles through super sampling modes.
+
+```typescript
+renderer.toggleSuperSampling()
+// Cycles: NONE → CPU → GPU → NONE
+```
+
+#### destroy()
+
+Cleans up renderer resources.
+
+```typescript
+renderer.destroy()
+```
+
+## TextureUtils
+
+Utility class for loading and generating textures.
+
+### TextureUtils.loadTextureFromFile()
+
+Loads a texture from an image file.
+
+```typescript
+import { TextureUtils } from "@opentui/core"
+
+const texture = await TextureUtils.loadTextureFromFile("./texture.png")
+```
+
+<ParamField path="path" type="string" required>
+  Path to the image file
+</ParamField>
+
+<ResponseField name="texture" type="DataTexture | null">
+  Loaded texture, or null if loading failed
+</ResponseField>
+
+### TextureUtils.fromFile()
+
+Alias for `loadTextureFromFile()`.
+
+```typescript
+const texture = await TextureUtils.fromFile("./texture.png")
+```
+
+### TextureUtils.createCheckerboard()
+
+Creates a procedural checkerboard texture.
+
+```typescript
+import { Color } from "three"
+
+const texture = TextureUtils.createCheckerboard(
+  256,
+  new Color(1, 1, 1),
+  new Color(0, 0, 0),
+  32
+)
+```
+
+<ParamField path="size" type="number" default="256">
+  Texture size in pixels (width and height)
+</ParamField>
+
+<ParamField path="color1" type="Color" default="white">
+  First checker color
+</ParamField>
+
+<ParamField path="color2" type="Color" default="black">
+  Second checker color
+</ParamField>
+
+<ParamField path="checkSize" type="number" default="32">
+  Size of each checker square in pixels
+</ParamField>
+
+<ResponseField name="texture" type="Texture">
+  Generated checkerboard texture
+</ResponseField>
+
+### TextureUtils.createGradient()
+
+Creates a procedural gradient texture.
+
+```typescript
+const texture = TextureUtils.createGradient(
+  256,
+  new Color(1, 0, 0),
+  new Color(0, 0, 1),
+  "vertical"
+)
+```
+
+<ParamField path="size" type="number" default="256">
+  Texture size in pixels
+</ParamField>
+
+<ParamField path="startColor" type="Color" default="red">
+  Gradient start color
+</ParamField>
+
+<ParamField path="endColor" type="Color" default="blue">
+  Gradient end color
+</ParamField>
+
+<ParamField path="direction" type="'horizontal' | 'vertical' | 'radial'" default="vertical">
+  Gradient direction
+</ParamField>
+
+<ResponseField name="texture" type="Texture">
+  Generated gradient texture
+</ResponseField>
+
+### TextureUtils.createNoise()
+
+Creates a procedural noise texture.
+
+```typescript
+const texture = TextureUtils.createNoise(
+  256,
+  1.0,
+  4,
+  new Color(1, 1, 1),
+  new Color(0, 0, 0)
+)
+```
+
+<ParamField path="size" type="number" default="256">
+  Texture size in pixels
+</ParamField>
+
+<ParamField path="scale" type="number" default="1">
+  Noise scale factor
+</ParamField>
+
+<ParamField path="octaves" type="number" default="1">
+  Number of noise octaves
+</ParamField>
+
+<ParamField path="color1" type="Color" default="white">
+  High noise value color
+</ParamField>
+
+<ParamField path="color2" type="Color" default="black">
+  Low noise value color
+</ParamField>
+
+<ResponseField name="texture" type="Texture">
+  Generated noise texture
+</ResponseField>
+
+## SpriteUtils
+
+Utility class for creating sprite objects.
+
+### SpriteUtils.fromFile()
+
+Creates a sprite from an image file.
+
+```typescript
+import { SpriteUtils } from "@opentui/core"
+
+const sprite = await SpriteUtils.fromFile("./character.png", {
+  materialParameters: {
+    alphaTest: 0.5,
+    depthWrite: true
+  }
+})
+scene.add(sprite)
+```
+
+<ParamField path="path" type="string" required>
+  Path to the sprite image
+</ParamField>
+
+<ParamField path="options" type="object">
+  <Expandable title="properties">
+    <ParamField path="materialParameters" type="SpriteMaterialParameters">
+      Three.js SpriteMaterial parameters (excluding map)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="sprite" type="Sprite">
+  Three.js Sprite with loaded texture
+</ResponseField>
+
+### SpriteUtils.sheetFromFile()
+
+Creates an animated sprite from a sprite sheet.
+
+```typescript
+const sprite = await SpriteUtils.sheetFromFile("./walk.png", 8)
+sprite.setIndex(0) // First frame
+scene.add(sprite)
+```
+
+<ParamField path="path" type="string" required>
+  Path to the sprite sheet image
+</ParamField>
+
+<ParamField path="numFrames" type="number" required>
+  Number of frames in the sprite sheet
+</ParamField>
+
+<ResponseField name="sprite" type="SheetSprite">
+  Sprite with frame selection capability
+</ResponseField>
+
+## SpriteAnimator
+
+Advanced sprite animation system with instancing support.
+
+### Constructor
+
+```typescript
+import { SpriteAnimator } from "@opentui/core"
+import { Scene } from "three"
+
+const scene = new Scene()
+const animator = new SpriteAnimator(scene)
+```
+
+<ParamField path="scene" type="Scene" required>
+  Three.js scene to add sprite meshes to
+</ParamField>
+
+### createSprite()
+
+Creates a new animated sprite instance.
+
+```typescript
+const sprite = await animator.createSprite({
+  initialAnimation: "idle",
+  animations: {
+    idle: {
+      resource: idleResource,
+      animNumFrames: 4,
+      animFrameOffset: 0,
+      frameDuration: 150,
+      loop: true
+    },
+    walk: {
+      resource: walkResource,
+      animNumFrames: 8,
+      animFrameOffset: 0,
+      frameDuration: 100,
+      loop: true
+    }
+  },
+  scale: 1.0,
+  renderOrder: 0,
+  depthWrite: true,
+  maxInstances: 1024
+})
+```
+
+<ParamField path="definition" type="SpriteDefinition" required>
+  Sprite configuration
+  
+  <Expandable title="SpriteDefinition properties">
+    <ParamField path="id" type="string">
+      Optional unique identifier
+    </ParamField>
+    
+    <ParamField path="initialAnimation" type="string" required>
+      Name of the starting animation
+    </ParamField>
+    
+    <ParamField path="animations" type="Record<string, AnimationDefinition>" required>
+      Map of animation names to definitions
+      
+      <Expandable title="AnimationDefinition properties">
+        <ParamField path="resource" type="SpriteResource" required>
+          Sprite sheet resource
+        </ParamField>
+        
+        <ParamField path="animNumFrames" type="number">
+          Number of frames in this animation
+        </ParamField>
+        
+        <ParamField path="animFrameOffset" type="number" default="0">
+          Starting frame in the sprite sheet
+        </ParamField>
+        
+        <ParamField path="frameDuration" type="number" default="100">
+          Duration per frame in milliseconds
+        </ParamField>
+        
+        <ParamField path="loop" type="boolean" default="true">
+          Whether to loop the animation
+        </ParamField>
+        
+        <ParamField path="initialFrame" type="number" default="0">
+          Starting frame index
+        </ParamField>
+        
+        <ParamField path="flipX" type="boolean" default="false">
+          Flip horizontally
+        </ParamField>
+        
+        <ParamField path="flipY" type="boolean" default="false">
+          Flip vertically
+        </ParamField>
+      </Expandable>
+    </ParamField>
+    
+    <ParamField path="scale" type="number" default="1.0">
+      Initial scale
+    </ParamField>
+    
+    <ParamField path="renderOrder" type="number" default="0">
+      Rendering order for depth sorting
+    </ParamField>
+    
+    <ParamField path="depthWrite" type="boolean" default="true">
+      Enable depth buffer writes
+    </ParamField>
+    
+    <ParamField path="maxInstances" type="number" default="1024">
+      Maximum sprite instances for this definition
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="materialFactory" type="() => NodeMaterial">
+  Optional factory function for custom materials
+</ParamField>
+
+<ResponseField name="sprite" type="TiledSprite">
+  Animated sprite instance
+</ResponseField>
+
+### update()
+
+Updates all sprite animations.
+
+```typescript
+animator.update(deltaTime)
+```
+
+<ParamField path="deltaTime" type="number" required>
+  Time elapsed since last update in milliseconds
+</ParamField>
+
+### removeSprite()
+
+Removes a sprite by ID.
+
+```typescript
+animator.removeSprite("player-sprite")
+```
+
+<ParamField path="id" type="string" required>
+  ID of the sprite to remove
+</ParamField>
+
+### removeAllSprites()
+
+Removes all sprites.
+
+```typescript
+animator.removeAllSprites()
+```
+
+## TiledSprite
+
+Animated sprite instance created by SpriteAnimator.
+
+### Properties
+
+<ResponseField name="id" type="string">
+  Unique identifier
+</ResponseField>
+
+<ResponseField name="visible" type="boolean">
+  Visibility state (get/set)
+</ResponseField>
+
+### Methods
+
+#### setAnimation()
+
+Switches to a different animation.
+
+```typescript
+await sprite.setAnimation("walk")
+```
+
+<ParamField path="name" type="string" required>
+  Name of the animation to switch to
+</ParamField>
+
+#### setPosition()
+
+Sets the sprite's position.
+
+```typescript
+import { Vector3 } from "three"
+
+sprite.setPosition(new Vector3(10, 0, 5))
+```
+
+<ParamField path="position" type="Vector3" required>
+  New position
+</ParamField>
+
+#### setRotation()
+
+Sets the sprite's rotation.
+
+```typescript
+import { Quaternion } from "three"
+
+sprite.setRotation(new Quaternion())
+```
+
+<ParamField path="rotation" type="Quaternion" required>
+  New rotation
+</ParamField>
+
+#### setScale()
+
+Sets the sprite's scale.
+
+```typescript
+sprite.setScale(new Vector3(2, 2, 1))
+```
+
+<ParamField path="scale" type="Vector3" required>
+  New scale
+</ParamField>
+
+#### play() / stop()
+
+Controls animation playback.
+
+```typescript
+sprite.play()
+sprite.stop()
+```
+
+#### goToFrame()
+
+Jumps to a specific frame.
+
+```typescript
+sprite.goToFrame(5)
+```
+
+<ParamField path="frame" type="number" required>
+  Frame index to jump to
+</ParamField>
+
+#### setFrameDuration()
+
+Changes the frame duration for the current animation.
+
+```typescript
+sprite.setFrameDuration(200) // 200ms per frame
+```
+
+<ParamField path="duration" type="number" required>
+  New frame duration in milliseconds
+</ParamField>
+
+## Example: 3D Scene
+
+```typescript
+import { ThreeRenderable, SuperSampleType, TextureUtils } from "@opentui/core"
+import { Scene, PerspectiveCamera, Mesh, BoxGeometry, MeshBasicMaterial } from "three"
+
+const scene = new Scene()
+const camera = new PerspectiveCamera(75, 16/9, 0.1, 1000)
+camera.position.z = 5
+
+// Create a textured cube
+const texture = await TextureUtils.createCheckerboard()
+const geometry = new BoxGeometry(1, 1, 1)
+const material = new MeshBasicMaterial({ map: texture })
+const cube = new Mesh(geometry, material)
+scene.add(cube)
+
+// Create renderable
+const renderable = new ThreeRenderable(ctx, {
+  scene,
+  camera,
+  renderer: {
+    backgroundColor: RGBA.fromValues(0.1, 0.1, 0.2, 1),
+    superSample: SuperSampleType.GPU
+  },
+  width: 80,
+  height: 40
+})
+
+// Rotate cube
+setInterval(() => {
+  cube.rotation.x += 0.01
+  cube.rotation.y += 0.01
+}, 16)
+```

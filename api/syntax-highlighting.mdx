@@ -1,0 +1,431 @@
+---
+title: "Syntax Highlighting"
+description: "Syntax highlighting API for applying color and text attributes to code in terminal UIs"
+---
+
+## Overview
+
+The Syntax Highlighting API provides a high-performance system for styling text with colors and attributes (bold, italic, underline, dim) in terminal applications. It's designed for syntax highlighting but can be used for any text styling needs.
+
+## SyntaxStyle Class
+
+### SyntaxStyle.create()
+
+Creates a new syntax style instance.
+
+```typescript
+import { SyntaxStyle } from "@opentui/core"
+
+const style = SyntaxStyle.create()
+```
+
+<ResponseField name="style" type="SyntaxStyle">
+  A new SyntaxStyle instance
+</ResponseField>
+
+### SyntaxStyle.fromTheme()
+
+Creates a syntax style from a theme definition.
+
+```typescript
+const style = SyntaxStyle.fromTheme([
+  {
+    scope: ["keyword", "keyword.control"],
+    style: {
+      foreground: "#FF0000",
+      bold: true
+    }
+  },
+  {
+    scope: ["string"],
+    style: {
+      foreground: { r: 0, g: 1, b: 0, a: 1 },
+      italic: true
+    }
+  }
+])
+```
+
+<ParamField path="theme" type="ThemeTokenStyle[]" required>
+  Array of theme token styles
+  
+  <Expandable title="ThemeTokenStyle properties">
+    <ParamField path="scope" type="string[]" required>
+      Array of scope names this style applies to
+    </ParamField>
+    
+    <ParamField path="style" type="object" required>
+      Style definition
+      
+      <Expandable title="style properties">
+        <ParamField path="foreground" type="ColorInput">
+          Foreground color as hex string or RGBA object
+        </ParamField>
+        
+        <ParamField path="background" type="ColorInput">
+          Background color as hex string or RGBA object
+        </ParamField>
+        
+        <ParamField path="bold" type="boolean">
+          Apply bold attribute
+        </ParamField>
+        
+        <ParamField path="italic" type="boolean">
+          Apply italic attribute
+        </ParamField>
+        
+        <ParamField path="underline" type="boolean">
+          Apply underline attribute
+        </ParamField>
+        
+        <ParamField path="dim" type="boolean">
+          Apply dim attribute
+        </ParamField>
+      </Expandable>
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="style" type="SyntaxStyle">
+  A new SyntaxStyle instance with registered theme styles
+</ResponseField>
+
+### SyntaxStyle.fromStyles()
+
+Creates a syntax style from a flat style definition object.
+
+```typescript
+const style = SyntaxStyle.fromStyles({
+  keyword: {
+    fg: RGBA.fromValues(1, 0, 0, 1),
+    bold: true
+  },
+  string: {
+    fg: RGBA.fromValues(0, 1, 0, 1),
+    italic: true
+  },
+  comment: {
+    fg: RGBA.fromValues(0.5, 0.5, 0.5, 1),
+    dim: true
+  }
+})
+```
+
+<ParamField path="styles" type="Record<string, StyleDefinition>" required>
+  Object mapping style names to style definitions
+</ParamField>
+
+<ResponseField name="style" type="SyntaxStyle">
+  A new SyntaxStyle instance with registered styles
+</ResponseField>
+
+## Instance Methods
+
+### registerStyle()
+
+Registers a new style with a given name.
+
+```typescript
+const styleId = style.registerStyle("function.name", {
+  fg: RGBA.fromValues(0, 0.5, 1, 1),
+  bold: true,
+  underline: true
+})
+```
+
+<ParamField path="name" type="string" required>
+  Unique name for this style
+</ParamField>
+
+<ParamField path="style" type="StyleDefinition" required>
+  Style definition
+  
+  <Expandable title="StyleDefinition properties">
+    <ParamField path="fg" type="RGBA">
+      Foreground color
+    </ParamField>
+    
+    <ParamField path="bg" type="RGBA">
+      Background color
+    </ParamField>
+    
+    <ParamField path="bold" type="boolean">
+      Bold text
+    </ParamField>
+    
+    <ParamField path="italic" type="boolean">
+      Italic text
+    </ParamField>
+    
+    <ParamField path="underline" type="boolean">
+      Underlined text
+    </ParamField>
+    
+    <ParamField path="dim" type="boolean">
+      Dimmed text
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="styleId" type="number">
+  Numeric ID for the registered style
+</ResponseField>
+
+### resolveStyleId()
+
+Resolves a style name to its numeric ID.
+
+```typescript
+const id = style.resolveStyleId("keyword")
+// Returns: 1 (or null if not found)
+```
+
+<ParamField path="name" type="string" required>
+  Name of the style to resolve
+</ParamField>
+
+<ResponseField name="id" type="number | null">
+  Numeric style ID, or null if not found
+</ResponseField>
+
+### getStyleId()
+
+Gets a style ID by name, with fallback to base scope for dotted names.
+
+```typescript
+// If "keyword.control" is not registered, falls back to "keyword"
+const id = style.getStyleId("keyword.control")
+```
+
+<ParamField path="name" type="string" required>
+  Name of the style (supports dot notation like "keyword.control")
+</ParamField>
+
+<ResponseField name="id" type="number | null">
+  Numeric style ID, or null if not found
+</ResponseField>
+
+### getStyle()
+
+Retrieves a style definition by name.
+
+```typescript
+const styleDef = style.getStyle("keyword")
+// Returns: { fg: RGBA, bold: true }
+```
+
+<ParamField path="name" type="string" required>
+  Name of the style to retrieve
+</ParamField>
+
+<ResponseField name="style" type="StyleDefinition | undefined">
+  The style definition, or undefined if not found
+</ResponseField>
+
+### mergeStyles()
+
+Merges multiple styles together, with later styles overriding earlier ones.
+
+```typescript
+const merged = style.mergeStyles("keyword", "keyword.control", "emphasis")
+// Returns: { fg: RGBA, bg: RGBA, attributes: number }
+```
+
+<ParamField path="...styleNames" type="string[]" required>
+  Names of styles to merge (later styles override earlier ones)
+</ParamField>
+
+<ResponseField name="merged" type="MergedStyle">
+  Merged style with combined colors and attributes
+  
+  <Expandable title="MergedStyle properties">
+    <ResponseField name="fg" type="RGBA | undefined">
+      Merged foreground color
+    </ResponseField>
+    
+    <ResponseField name="bg" type="RGBA | undefined">
+      Merged background color
+    </ResponseField>
+    
+    <ResponseField name="attributes" type="number">
+      Combined text attributes as bit flags
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### getAllStyles()
+
+Gets all registered style definitions.
+
+```typescript
+const allStyles = style.getAllStyles()
+// Returns: Map<string, StyleDefinition>
+```
+
+<ResponseField name="styles" type="Map<string, StyleDefinition>">
+  Map of all registered styles
+</ResponseField>
+
+### getRegisteredNames()
+
+Gets all registered style names.
+
+```typescript
+const names = style.getRegisteredNames()
+// Returns: ["keyword", "string", "comment", ...]
+```
+
+<ResponseField name="names" type="string[]">
+  Array of all registered style names
+</ResponseField>
+
+### getStyleCount()
+
+Gets the total number of registered styles.
+
+```typescript
+const count = style.getStyleCount()
+// Returns: 42
+```
+
+<ResponseField name="count" type="number">
+  Number of registered styles
+</ResponseField>
+
+### clearCache()
+
+Clears the internal merged styles cache.
+
+```typescript
+style.clearCache()
+```
+
+### clearNameCache()
+
+Clears the name-to-ID resolution cache.
+
+```typescript
+style.clearNameCache()
+```
+
+### getCacheSize()
+
+Gets the current size of the merged styles cache.
+
+```typescript
+const size = style.getCacheSize()
+// Returns: 15
+```
+
+<ResponseField name="size" type="number">
+  Number of cached merged style combinations
+</ResponseField>
+
+### destroy()
+
+Destroy the style instance and free resources.
+
+```typescript
+style.destroy()
+```
+
+## Utility Functions
+
+### convertThemeToStyles()
+
+Converts a theme token array to a flat styles object.
+
+```typescript
+import { convertThemeToStyles } from "@opentui/core"
+
+const theme = [
+  {
+    scope: ["keyword", "keyword.control"],
+    style: { foreground: "#FF0000", bold: true }
+  }
+]
+
+const flatStyles = convertThemeToStyles(theme)
+// Returns: { keyword: { fg: RGBA, bold: true }, "keyword.control": { ... } }
+```
+
+<ParamField path="theme" type="ThemeTokenStyle[]" required>
+  Theme definition array
+</ParamField>
+
+<ResponseField name="styles" type="Record<string, StyleDefinition>">
+  Flat object mapping scope names to style definitions
+</ResponseField>
+
+## Types
+
+### ColorInput
+
+Color can be specified as a hex string or RGBA object:
+
+```typescript
+type ColorInput = string | { r: number; g: number; b: number; a: number }
+
+// Examples:
+"#FF0000"
+"#FF0000FF"
+{ r: 1.0, g: 0.0, b: 0.0, a: 1.0 }
+```
+
+### RGBA
+
+Color object with normalized values (0-1 range):
+
+```typescript
+import { RGBA } from "@opentui/core"
+
+const red = RGBA.fromValues(1, 0, 0, 1)
+const blue = RGBA.fromHex("#0000FF")
+```
+
+## Example: Syntax Highlighting
+
+```typescript
+import { SyntaxStyle, RGBA } from "@opentui/core"
+
+// Create a style for TypeScript syntax
+const tsStyle = SyntaxStyle.fromStyles({
+  keyword: {
+    fg: RGBA.fromHex("#C586C0"),
+    bold: true
+  },
+  "keyword.control": {
+    fg: RGBA.fromHex("#C586C0"),
+    italic: true
+  },
+  string: {
+    fg: RGBA.fromHex("#CE9178")
+  },
+  "string.template": {
+    fg: RGBA.fromHex("#CE9178")
+  },
+  number: {
+    fg: RGBA.fromHex("#B5CEA8")
+  },
+  comment: {
+    fg: RGBA.fromHex("#6A9955"),
+    italic: true
+  },
+  function: {
+    fg: RGBA.fromHex("#DCDCAA")
+  },
+  variable: {
+    fg: RGBA.fromHex("#9CDCFE")
+  },
+  type: {
+    fg: RGBA.fromHex("#4EC9B0")
+  }
+})
+
+// Use the style
+const keywordId = tsStyle.getStyleId("keyword")
+const merged = tsStyle.mergeStyles("keyword", "keyword.control")
+
+// Clean up when done
+tsStyle.destroy()
+```

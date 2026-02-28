@@ -1,0 +1,330 @@
+---
+title: 'Keyboard Input'
+description: 'Handle keyboard events and key presses in OpenTUI'
+---
+
+## Overview
+
+OpenTUI provides a comprehensive keyboard input handling system that supports standard key events, modifier keys, and the Kitty keyboard protocol for enhanced terminal input.
+
+## KeyHandler
+
+The `KeyHandler` class is the main entry point for handling keyboard input. It extends `EventEmitter` and emits events for key presses, key releases, and paste operations.
+
+### Events
+
+<ResponseField name="keypress" type="event">
+  Emitted when a key is pressed down.
+  
+  **Callback arguments:**
+  - `event` ([KeyEvent](#keyevent)) - The key event object
+</ResponseField>
+
+<ResponseField name="keyrelease" type="event">
+  Emitted when a key is released.
+  
+  **Callback arguments:**
+  - `event` ([KeyEvent](#keyevent)) - The key event object
+</ResponseField>
+
+<ResponseField name="paste" type="event">
+  Emitted when text is pasted into the terminal.
+  
+  **Callback arguments:**
+  - `event` ([PasteEvent](#pasteevent)) - The paste event object
+</ResponseField>
+
+### Usage
+
+```typescript
+import { createCliRenderer } from '@opentui/core'
+
+const renderer = await createCliRenderer()
+
+// Listen for key presses
+renderer.keyInput.on('keypress', (event) => {
+  console.log(`Key pressed: ${event.name}`)
+  
+  if (event.ctrl && event.name === 's') {
+    console.log('Save shortcut triggered')
+    event.preventDefault()
+  }
+})
+
+// Listen for key releases
+renderer.keyInput.on('keyrelease', (event) => {
+  console.log(`Key released: ${event.name}`)
+})
+
+// Listen for paste events
+renderer.keyInput.on('paste', (event) => {
+  console.log(`Pasted text: ${event.text}`)
+})
+```
+
+## KeyEvent
+
+The `KeyEvent` interface represents a keyboard event with detailed information about the key pressed and any modifiers.
+
+### Properties
+
+<ResponseField name="name" type="string">
+  The name of the key (e.g., "a", "return", "escape", "up", "f1")
+</ResponseField>
+
+<ResponseField name="ctrl" type="boolean">
+  Whether the Ctrl/Control modifier key was pressed
+</ResponseField>
+
+<ResponseField name="meta" type="boolean">
+  Whether the Meta/Alt/Option modifier key was pressed
+</ResponseField>
+
+<ResponseField name="shift" type="boolean">
+  Whether the Shift modifier key was pressed
+</ResponseField>
+
+<ResponseField name="option" type="boolean">
+  Whether the Option/Alt modifier key was pressed (macOS)
+</ResponseField>
+
+<ResponseField name="super" type="boolean" optional>
+  Whether the Super/Command modifier key was pressed (requires Kitty protocol)
+</ResponseField>
+
+<ResponseField name="hyper" type="boolean" optional>
+  Whether the Hyper modifier key was pressed (requires Kitty protocol)
+</ResponseField>
+
+<ResponseField name="sequence" type="string">
+  The raw escape sequence that was received
+</ResponseField>
+
+<ResponseField name="number" type="boolean">
+  Whether the key is a numeric digit (0-9)
+</ResponseField>
+
+<ResponseField name="raw" type="string">
+  The original raw input string
+</ResponseField>
+
+<ResponseField name="eventType" type="KeyEventType">
+  The type of keyboard event: `"press"`, `"repeat"`, or `"release"`
+</ResponseField>
+
+<ResponseField name="source" type="'raw' | 'kitty'">
+  The source parser that decoded this event
+</ResponseField>
+
+<ResponseField name="code" type="string" optional>
+  The terminal escape code (if applicable)
+</ResponseField>
+
+<ResponseField name="capsLock" type="boolean" optional>
+  Whether Caps Lock was active (requires Kitty protocol)
+</ResponseField>
+
+<ResponseField name="numLock" type="boolean" optional>
+  Whether Num Lock was active (requires Kitty protocol)
+</ResponseField>
+
+<ResponseField name="baseCode" type="number" optional>
+  The base key code before modifiers (Kitty protocol)
+</ResponseField>
+
+<ResponseField name="repeated" type="boolean" optional>
+  Whether this is a repeated key event (key held down)
+</ResponseField>
+
+<ResponseField name="defaultPrevented" type="boolean" readonly>
+  Whether `preventDefault()` was called on this event
+</ResponseField>
+
+<ResponseField name="propagationStopped" type="boolean" readonly>
+  Whether `stopPropagation()` was called on this event
+</ResponseField>
+
+### Methods
+
+<ResponseField name="preventDefault()" type="() => void">
+  Prevents the default action for this key event from executing
+</ResponseField>
+
+<ResponseField name="stopPropagation()" type="() => void">
+  Stops the event from propagating to other handlers
+</ResponseField>
+
+### Example
+
+```typescript
+renderer.keyInput.on('keypress', (event) => {
+  // Check for specific key combinations
+  if (event.ctrl && event.shift && event.name === 'p') {
+    console.log('Command palette opened')
+    event.preventDefault()
+    event.stopPropagation()
+  }
+  
+  // Handle arrow keys
+  if (['up', 'down', 'left', 'right'].includes(event.name)) {
+    console.log(`Arrow key: ${event.name}`)
+  }
+  
+  // Handle numbers
+  if (event.number) {
+    console.log(`Number key: ${event.name}`)
+  }
+})
+```
+
+## PasteEvent
+
+The `PasteEvent` interface represents a paste operation in the terminal (bracketed paste mode).
+
+### Properties
+
+<ResponseField name="text" type="string">
+  The pasted text content (ANSI escape codes are stripped)
+</ResponseField>
+
+<ResponseField name="defaultPrevented" type="boolean" readonly>
+  Whether `preventDefault()` was called on this event
+</ResponseField>
+
+<ResponseField name="propagationStopped" type="boolean" readonly>
+  Whether `stopPropagation()` was called on this event
+</ResponseField>
+
+### Methods
+
+<ResponseField name="preventDefault()" type="() => void">
+  Prevents the default paste handling
+</ResponseField>
+
+<ResponseField name="stopPropagation()" type="() => void">
+  Stops the event from propagating to other handlers
+</ResponseField>
+
+### Example
+
+```typescript
+renderer.keyInput.on('paste', (event) => {
+  console.log(`User pasted: ${event.text.substring(0, 50)}...`)
+  
+  // Process or validate the pasted content
+  if (event.text.length > 10000) {
+    console.log('Pasted text is too large')
+    event.preventDefault()
+  }
+})
+```
+
+## Kitty Keyboard Protocol
+
+OpenTUI supports the [Kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/) for enhanced keyboard input handling. This protocol provides:
+
+- Disambiguated escape codes (fixes ESC timing, alt+key ambiguity)
+- Event types (press, repeat, release)
+- Alternate keys (numpad vs regular, shifted vs base layout)
+- Additional modifiers (Super, Hyper, Caps Lock, Num Lock)
+
+### Configuration
+
+Enable the Kitty keyboard protocol when creating the renderer:
+
+```typescript
+const renderer = await createCliRenderer({
+  useKittyKeyboard: {
+    disambiguate: true,      // Default: true
+    alternateKeys: true,     // Default: true
+    events: false,           // Default: false (enables keyrelease events)
+    allKeysAsEscapes: false, // Default: false
+    reportText: false,       // Default: false
+  }
+})
+```
+
+### Options
+
+<ResponseField name="disambiguate" type="boolean" default="true">
+  Disambiguate escape codes to fix ESC timing issues and alt+key ambiguity
+</ResponseField>
+
+<ResponseField name="alternateKeys" type="boolean" default="true">
+  Report alternate keys (numpad, shifted, base layout) for cross-keyboard shortcuts
+</ResponseField>
+
+<ResponseField name="events" type="boolean" default="false">
+  Report event types (press, repeat, release) to enable `keyrelease` events
+</ResponseField>
+
+<ResponseField name="allKeysAsEscapes" type="boolean" default="false">
+  Report all keys as escape codes
+</ResponseField>
+
+<ResponseField name="reportText" type="boolean" default="false">
+  Report text associated with key events
+</ResponseField>
+
+## Common Key Names
+
+### Special Keys
+
+- `"return"` - Enter/Return key
+- `"escape"` - Escape key
+- `"backspace"` - Backspace key
+- `"tab"` - Tab key
+- `"space"` - Spacebar
+- `"delete"` - Delete key
+
+### Navigation Keys
+
+- `"up"`, `"down"`, `"left"`, `"right"` - Arrow keys
+- `"home"`, `"end"` - Home and End keys
+- `"pageup"`, `"pagedown"` - Page Up and Page Down
+
+### Function Keys
+
+- `"f1"` through `"f12"` - Function keys
+
+### Letters and Numbers
+
+- `"a"` through `"z"` - Letter keys (lowercase)
+- `"0"` through `"9"` - Number keys
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Handle event propagation">
+    Call `event.stopPropagation()` when you handle an event to prevent it from bubbling to other handlers:
+    
+    ```typescript
+    renderer.keyInput.on('keypress', (event) => {
+      if (event.ctrl && event.name === 'q') {
+        process.exit(0)
+        event.stopPropagation()
+      }
+    })
+    ```
+  </Accordion>
+  
+  <Accordion title="Check event.defaultPrevented">
+    Before performing an action, check if another handler already prevented the default behavior:
+    
+    ```typescript
+    renderer.keyInput.on('keypress', (event) => {
+      if (event.defaultPrevented) return
+      
+      // Handle the event
+    })
+    ```
+  </Accordion>
+  
+  <Accordion title="Use keyboard shortcuts consistently">
+    Follow common keyboard shortcut conventions:
+    - Ctrl+C: Copy (or exit if enabled in config)
+    - Ctrl+V: Paste
+    - Ctrl+Z: Undo
+    - Ctrl+S: Save
+  </Accordion>
+</AccordionGroup>

@@ -1,0 +1,385 @@
+---
+title: TextTable
+description: Display tabular data with flexible layouts, borders, and text wrapping
+---
+
+## Overview
+
+TextTableRenderable renders tabular data with customizable borders, wrapping modes, and column sizing strategies. It supports text selection across cells, multiple border styles, and handles complex content including styled text and Unicode characters.
+
+## Basic Usage
+
+```typescript
+import { TextTableRenderable, createCliRenderer } from '@opentui/core'
+
+const renderer = await createCliRenderer()
+
+const table = new TextTableRenderable(renderer, {
+  content: [
+    [[{ __isChunk: true, text: 'Name' }], [{ __isChunk: true, text: 'Status' }]],
+    [[{ __isChunk: true, text: 'API' }], [{ __isChunk: true, text: 'OK' }]],
+    [[{ __isChunk: true, text: 'Worker' }], [{ __isChunk: true, text: 'ERROR' }]],
+  ],
+  wrapMode: 'word',
+  borderStyle: 'single',
+})
+
+renderer.root.add(table)
+```
+
+## With Styled Content
+
+```typescript
+import { TextTableRenderable, bold, fg } from '@opentui/core'
+
+const table = new TextTableRenderable(renderer, {
+  content: [
+    [[bold('Service')], [bold('Status')], [bold('Latency')]],
+    [
+      [{ __isChunk: true, text: 'api' }],
+      [fg('#00d4aa')('OK')],
+      [{ __isChunk: true, text: '28ms' }],
+    ],
+    [
+      [{ __isChunk: true, text: 'worker' }],
+      [fg('#b8a0ff')('DEGRADED')],
+      [{ __isChunk: true, text: '124ms' }],
+    ],
+    [
+      [{ __isChunk: true, text: 'billing' }],
+      [fg('#ffffff')('ERROR')],
+      [{ __isChunk: true, text: 'timeout' }],
+    ],
+  ],
+  borderStyle: 'rounded',
+  borderColor: '#2a2a2a',
+  fg: '#f0f0f0',
+  cellPadding: 1,
+})
+```
+
+## Full Width Table
+
+```typescript
+const table = new TextTableRenderable(renderer, {
+  content: [
+    [[{ __isChunk: true, text: 'Region' }], [{ __isChunk: true, text: 'Requests' }]],
+    [[{ __isChunk: true, text: 'us-east-1' }], [{ __isChunk: true, text: '1.2M' }]],
+    [[{ __isChunk: true, text: 'eu-west-1' }], [{ __isChunk: true, text: '890K' }]],
+  ],
+  width: '100%',
+  columnWidthMode: 'full', // Expand columns to fill available width
+  wrapMode: 'word',
+})
+```
+
+## Text Wrapping
+
+```typescript
+// Long content that wraps within cells
+const table = new TextTableRenderable(renderer, {
+  content: [
+    [
+      [{ __isChunk: true, text: 'Task' }],
+      [{ __isChunk: true, text: 'Description' }],
+    ],
+    [
+      [{ __isChunk: true, text: 'Migration' }],
+      [{ __isChunk: true, text: 'Migrate all production databases to the new infrastructure with zero downtime and full data validation' }],
+    ],
+  ],
+  wrapMode: 'word', // 'none' | 'word' | 'char'
+  columnFitter: 'balanced', // Better distribution for wrapped content
+})
+```
+
+## Border Styles
+
+```typescript
+// Different border configurations
+const doubleBorder = new TextTableRenderable(renderer, {
+  content: data,
+  borderStyle: 'double',
+  border: true,
+  outerBorder: true,
+})
+
+const innerOnly = new TextTableRenderable(renderer, {
+  content: data,
+  border: true,
+  outerBorder: false, // Only show borders between cells
+})
+
+const noBorders = new TextTableRenderable(renderer, {
+  content: data,
+  showBorders: false, // Hide all borders while preserving layout
+})
+```
+
+## Unicode and CJK Support
+
+```typescript
+const unicodeTable = new TextTableRenderable(renderer, {
+  content: [
+    [[{ __isChunk: true, text: 'Locale' }], [{ __isChunk: true, text: 'Sample' }]],
+    [[{ __isChunk: true, text: 'ja-JP' }], [{ __isChunk: true, text: '東京の夜景と絵文字 🌃✨' }]],
+    [[{ __isChunk: true, text: 'zh-CN' }], [{ __isChunk: true, text: '你好世界，布局检查中 🚀' }]],
+    [[{ __isChunk: true, text: 'ko-KR' }], [{ __isChunk: true, text: '한글과 이모지 조합 테스트 😄' }]],
+  ],
+  wrapMode: 'char', // Better for CJK text
+})
+```
+
+## Props
+
+<ParamField path="content" type="TextTableContent" default="[]">
+  Table data as a 2D array of cell content. Each cell contains TextChunk[] or null/undefined.
+  
+  ```typescript
+  type TextTableContent = TextTableCellContent[][]
+  type TextTableCellContent = TextChunk[] | null | undefined
+  ```
+</ParamField>
+
+<ParamField path="wrapMode" type="'none' | 'char' | 'word'" default="'word'">
+  Text wrapping behavior within cells:
+  - `'none'`: No wrapping, content may overflow
+  - `'word'`: Wrap at word boundaries
+  - `'char'`: Wrap at any character (better for CJK)
+</ParamField>
+
+<ParamField path="columnWidthMode" type="'content' | 'full'" default="'full'">
+  Column sizing strategy:
+  - `'content'`: Columns sized to fit content
+  - `'full'`: Columns expand to fill available width
+</ParamField>
+
+<ParamField path="columnFitter" type="'proportional' | 'balanced'" default="'proportional'">
+  Algorithm for shrinking columns when content exceeds available width:
+  - `'proportional'`: Shrink proportionally to intrinsic width
+  - `'balanced'`: More even distribution using sqrt-based weighting
+</ParamField>
+
+<ParamField path="cellPadding" type="number" default="0">
+  Padding around cell content (applied to all sides). Minimum value is 0.
+</ParamField>
+
+<ParamField path="showBorders" type="boolean" default="true">
+  Whether to draw borders. When false, borders are hidden but layout remains the same.
+</ParamField>
+
+<ParamField path="border" type="boolean" default="true">
+  Whether to show inner borders between cells.
+</ParamField>
+
+<ParamField path="outerBorder" type="boolean" default="true">
+  Whether to show the outer border around the entire table.
+</ParamField>
+
+<ParamField path="borderStyle" type="BorderStyle" default="'single'">
+  Border drawing style: `'single'` | `'rounded'` | `'double'` | `'heavy'`
+</ParamField>
+
+<ParamField path="borderColor" type="ColorInput" default="'#FFFFFF'">
+  Color of the border lines. Accepts hex colors, RGB objects, or color names.
+</ParamField>
+
+<ParamField path="borderBackgroundColor" type="ColorInput" default="'transparent'">
+  Background color behind borders.
+</ParamField>
+
+<ParamField path="backgroundColor" type="ColorInput" default="'transparent'">
+  Background color for the entire table.
+</ParamField>
+
+<ParamField path="fg" type="ColorInput" default="'#FFFFFF'">
+  Default text color for cell content.
+</ParamField>
+
+<ParamField path="bg" type="ColorInput" default="'transparent'">
+  Default background color for cell content.
+</ParamField>
+
+<ParamField path="attributes" type="number" default="0">
+  Default text attributes (bold, italic, etc.) as a bitmask.
+</ParamField>
+
+<ParamField path="selectable" type="boolean" default="true">
+  Whether table content can be selected with mouse drag.
+</ParamField>
+
+<ParamField path="selectionBg" type="ColorInput">
+  Background color for selected text.
+</ParamField>
+
+<ParamField path="selectionFg" type="ColorInput">
+  Foreground color for selected text.
+</ParamField>
+
+## Methods
+
+### content
+
+Get or set the table content.
+
+```typescript
+table.content = newData
+const currentData = table.content
+```
+
+### wrapMode
+
+Get or set the text wrapping mode.
+
+```typescript
+table.wrapMode = 'char'
+```
+
+### columnWidthMode
+
+Get or set the column width mode.
+
+```typescript
+table.columnWidthMode = 'content'
+```
+
+### columnFitter
+
+Get or set the column fitting algorithm.
+
+```typescript
+table.columnFitter = 'balanced'
+```
+
+### cellPadding
+
+Get or set the cell padding.
+
+```typescript
+table.cellPadding = 1
+```
+
+### showBorders
+
+Get or set border visibility.
+
+```typescript
+table.showBorders = false
+```
+
+### border
+
+Get or set inner border display.
+
+```typescript
+table.border = false
+```
+
+### outerBorder
+
+Get or set outer border display.
+
+```typescript
+table.outerBorder = true
+```
+
+### borderStyle
+
+Get or set the border style.
+
+```typescript
+table.borderStyle = 'double'
+```
+
+### borderColor
+
+Get or set the border color.
+
+```typescript
+table.borderColor = '#2a2a2a'
+```
+
+### getSelectedText()
+
+Get the currently selected text from the table. Returns tab-separated columns and newline-separated rows.
+
+```typescript
+const selected = table.getSelectedText()
+// Example output: "api\tOK\t28ms\nworker\tDEGRADED\t124ms"
+```
+
+## Selection Support
+
+TextTableRenderable supports three selection modes:
+
+- **single-cell**: Selection within one cell
+- **column-locked**: Selection across rows in the same column
+- **grid**: Free selection across any cells
+
+```typescript
+renderer.on('selection', (selection) => {
+  const selectedText = table.getSelectedText()
+  console.log('Selected:', selectedText)
+})
+
+// Clear selection
+renderer.clearSelection()
+```
+
+## Common Patterns
+
+### Dynamic Data Updates
+
+```typescript
+function updateTableData(newData: TextTableContent) {
+  table.content = newData
+  // Table automatically recalculates layout and re-renders
+}
+
+setInterval(() => {
+  updateTableData(fetchLatestData())
+}, 1000)
+```
+
+### Responsive Width
+
+```typescript
+const table = new TextTableRenderable(renderer, {
+  content: data,
+  width: '100%', // Fill parent width
+  columnWidthMode: 'full',
+  wrapMode: 'word',
+  flexGrow: 1, // Grow with parent
+})
+```
+
+### Status Dashboard
+
+```typescript
+const statusTable = new TextTableRenderable(renderer, {
+  content: [
+    [[bold('Service')], [bold('Status')], [bold('Uptime')]],
+    ...services.map(s => [
+      [{ __isChunk: true, text: s.name }],
+      [fg(s.healthy ? '#00ff00' : '#ff0000')(s.status)],
+      [{ __isChunk: true, text: s.uptime }],
+    ]),
+  ],
+  borderStyle: 'rounded',
+  cellPadding: 1,
+  width: '100%',
+})
+```
+
+## Performance Notes
+
+- Tables efficiently handle cell content changes by only rebuilding modified cells
+- Layout computation is cached and only recalculated when dimensions or content change
+- Large tables with wrapping enabled may require more computation for layout
+- Use `columnWidthMode: 'content'` for better performance with fixed-width content
+
+## Related Components
+
+- [Box](/components/box) - Container for tables
+- [ScrollBox](/components/scrollbox) - Scrollable container for large tables
+- [Text](/components/text) - For styled text content in cells

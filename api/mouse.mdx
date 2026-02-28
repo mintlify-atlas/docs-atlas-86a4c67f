@@ -1,0 +1,422 @@
+---
+title: 'Mouse Input'
+description: 'Handle mouse events and interactions in OpenTUI'
+---
+
+## Overview
+
+OpenTUI provides comprehensive mouse input handling for terminal user interfaces, supporting clicks, drags, scrolling, and hover events.
+
+## MouseEvent
+
+The `MouseEvent` class represents a mouse interaction event with position, button information, and modifiers.
+
+### Properties
+
+<ResponseField name="type" type="MouseEventType" readonly>
+  The type of mouse event:
+  - `"down"` - Mouse button pressed
+  - `"up"` - Mouse button released
+  - `"move"` - Mouse moved without buttons pressed
+  - `"drag"` - Mouse moved with button pressed
+  - `"drag-end"` - Drag operation ended
+  - `"drop"` - Item dropped on target
+  - `"over"` - Mouse entered element
+  - `"out"` - Mouse left element
+  - `"scroll"` - Mouse wheel scrolled
+</ResponseField>
+
+<ResponseField name="button" type="number" readonly>
+  The mouse button that triggered the event:
+  - `0` (MouseButton.LEFT) - Left button
+  - `1` (MouseButton.MIDDLE) - Middle button
+  - `2` (MouseButton.RIGHT) - Right button
+  - `4` (MouseButton.WHEEL_UP) - Scroll wheel up
+  - `5` (MouseButton.WHEEL_DOWN) - Scroll wheel down
+</ResponseField>
+
+<ResponseField name="x" type="number" readonly>
+  The X coordinate of the mouse pointer (0-based, terminal columns)
+</ResponseField>
+
+<ResponseField name="y" type="number" readonly>
+  The Y coordinate of the mouse pointer (0-based, terminal rows)
+</ResponseField>
+
+<ResponseField name="target" type="Renderable | null" readonly>
+  The renderable element that was clicked or is under the cursor
+</ResponseField>
+
+<ResponseField name="source" type="Renderable" optional readonly>
+  The source renderable for drag-and-drop operations (available in `"drop"` and `"over"` events during drag)
+</ResponseField>
+
+<ResponseField name="modifiers" type="object" readonly>
+  Keyboard modifiers held during the mouse event
+  
+  <Expandable title="properties">
+    <ResponseField name="shift" type="boolean">
+      Whether the Shift key was held
+    </ResponseField>
+    
+    <ResponseField name="alt" type="boolean">
+      Whether the Alt/Option key was held
+    </ResponseField>
+    
+    <ResponseField name="ctrl" type="boolean">
+      Whether the Ctrl/Control key was held
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="scroll" type="ScrollInfo" optional readonly>
+  Scroll information (only present for `"scroll"` events)
+  
+  <Expandable title="properties">
+    <ResponseField name="direction" type="'up' | 'down' | 'left' | 'right'">
+      The scroll direction
+    </ResponseField>
+    
+    <ResponseField name="delta" type="number">
+      The scroll amount (typically 1 for single scroll events)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="isDragging" type="boolean" optional readonly>
+  Whether this event is part of an active drag operation
+</ResponseField>
+
+<ResponseField name="defaultPrevented" type="boolean" readonly>
+  Whether `preventDefault()` was called on this event
+</ResponseField>
+
+<ResponseField name="propagationStopped" type="boolean" readonly>
+  Whether `stopPropagation()` was called on this event
+</ResponseField>
+
+### Methods
+
+<ResponseField name="preventDefault()" type="() => void">
+  Prevents the default action for this mouse event from executing (e.g., prevents focus change on click)
+</ResponseField>
+
+<ResponseField name="stopPropagation()" type="() => void">
+  Stops the event from propagating to parent elements
+</ResponseField>
+
+### Example
+
+```typescript
+import { Renderable } from '@opentui/core'
+
+class Button extends Renderable {
+  constructor() {
+    super()
+    
+    this.on('mouse:down', (event) => {
+      if (event.button === MouseButton.LEFT) {
+        console.log(`Button clicked at (${event.x}, ${event.y})`)
+        event.preventDefault()
+        event.stopPropagation()
+      }
+    })
+    
+    this.on('mouse:over', (event) => {
+      console.log('Mouse entered button')
+      this.setStyle({ backgroundColor: 'blue' })
+    })
+    
+    this.on('mouse:out', (event) => {
+      console.log('Mouse left button')
+      this.setStyle({ backgroundColor: 'gray' })
+    })
+  }
+}
+```
+
+## MouseButton Enum
+
+The `MouseButton` enum provides constants for mouse button identification:
+
+```typescript
+enum MouseButton {
+  LEFT = 0,
+  MIDDLE = 1,
+  RIGHT = 2,
+  WHEEL_UP = 4,
+  WHEEL_DOWN = 5,
+}
+```
+
+### Example
+
+```typescript
+this.on('mouse:down', (event) => {
+  switch (event.button) {
+    case MouseButton.LEFT:
+      console.log('Left click')
+      break
+    case MouseButton.RIGHT:
+      console.log('Right click')
+      break
+    case MouseButton.MIDDLE:
+      console.log('Middle click')
+      break
+  }
+})
+```
+
+## Mouse Events on Renderables
+
+Renderables can listen to mouse events using the following event names:
+
+<ResponseField name="mouse:down" type="event">
+  Fired when a mouse button is pressed while over the renderable
+  
+  **Callback arguments:**
+  - `event` (MouseEvent)
+</ResponseField>
+
+<ResponseField name="mouse:up" type="event">
+  Fired when a mouse button is released
+  
+  **Callback arguments:**
+  - `event` (MouseEvent)
+</ResponseField>
+
+<ResponseField name="mouse:move" type="event">
+  Fired when the mouse moves over the renderable without any buttons pressed
+  
+  **Callback arguments:**
+  - `event` (MouseEvent)
+</ResponseField>
+
+<ResponseField name="mouse:drag" type="event">
+  Fired when the mouse moves with a button held down
+  
+  **Callback arguments:**
+  - `event` (MouseEvent)
+</ResponseField>
+
+<ResponseField name="mouse:drag-end" type="event">
+  Fired when a drag operation ends
+  
+  **Callback arguments:**
+  - `event` (MouseEvent)
+</ResponseField>
+
+<ResponseField name="mouse:drop" type="event">
+  Fired when a dragged item is dropped on the renderable
+  
+  **Callback arguments:**
+  - `event` (MouseEvent) - `event.source` contains the dragged renderable
+</ResponseField>
+
+<ResponseField name="mouse:over" type="event">
+  Fired when the mouse enters the renderable's bounds
+  
+  **Callback arguments:**
+  - `event` (MouseEvent)
+</ResponseField>
+
+<ResponseField name="mouse:out" type="event">
+  Fired when the mouse leaves the renderable's bounds
+  
+  **Callback arguments:**
+  - `event` (MouseEvent)
+</ResponseField>
+
+<ResponseField name="mouse:scroll" type="event">
+  Fired when the mouse wheel is scrolled over the renderable
+  
+  **Callback arguments:**
+  - `event` (MouseEvent) - `event.scroll` contains direction and delta
+</ResponseField>
+
+## Renderer Configuration
+
+Mouse input can be configured when creating the renderer:
+
+```typescript
+const renderer = await createCliRenderer({
+  useMouse: true,              // Enable/disable mouse input (default: true)
+  enableMouseMovement: true,   // Track mouse movement events (default: true)
+  autoFocus: true,             // Auto-focus elements on click (default: true)
+})
+```
+
+### Options
+
+<ResponseField name="useMouse" type="boolean" default="true">
+  Enable or disable mouse input handling globally
+</ResponseField>
+
+<ResponseField name="enableMouseMovement" type="boolean" default="true">
+  Track mouse movement and hover events (may reduce performance in some terminals)
+</ResponseField>
+
+<ResponseField name="autoFocus" type="boolean" default="true">
+  Automatically focus renderable elements when clicked with the left mouse button
+</ResponseField>
+
+## Mouse Pointer Styles
+
+You can change the mouse cursor style using the renderer:
+
+```typescript
+renderer.setMousePointer('pointer') // Show pointer cursor
+renderer.setMousePointer('default') // Reset to default cursor
+```
+
+Available cursor styles depend on terminal support.
+
+## Drag and Drop
+
+OpenTUI automatically handles drag and drop when you click and drag on a renderable:
+
+```typescript
+class DraggableBox extends Renderable {
+  constructor() {
+    super()
+    
+    // Fired when drag starts
+    this.on('mouse:drag', (event) => {
+      console.log('Dragging...')
+    })
+    
+    // Fired when drag ends
+    this.on('mouse:drag-end', (event) => {
+      console.log('Drag ended')
+    })
+  }
+}
+
+class DropTarget extends Renderable {
+  constructor() {
+    super()
+    
+    // Fired when something is dropped on this element
+    this.on('mouse:drop', (event) => {
+      console.log('Dropped:', event.source)
+    })
+    
+    // Fired when something is dragged over this element
+    this.on('mouse:over', (event) => {
+      if (event.source) {
+        console.log('Dragging over target')
+      }
+    })
+  }
+}
+```
+
+## Scroll Handling
+
+Handle mouse wheel scrolling:
+
+```typescript
+class ScrollableList extends Renderable {
+  constructor() {
+    super()
+    
+    this.on('mouse:scroll', (event) => {
+      if (event.scroll) {
+        const { direction, delta } = event.scroll
+        
+        if (direction === 'up') {
+          this.scrollUp(delta)
+        } else if (direction === 'down') {
+          this.scrollDown(delta)
+        }
+      }
+    })
+  }
+}
+```
+
+## Hit Testing
+
+The renderer provides a `hitTest` method to determine which renderable is at a specific position:
+
+```typescript
+const renderableId = renderer.hitTest(x, y)
+const renderable = Renderable.renderablesByNumber.get(renderableId)
+
+if (renderable) {
+  console.log('Found renderable at position:', renderable)
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Prevent default behavior when handling clicks">
+    Always call `event.preventDefault()` when you handle a click to prevent unwanted side effects:
+    
+    ```typescript
+    this.on('mouse:down', (event) => {
+      // Handle the click
+      this.onClick()
+      
+      // Prevent default focus behavior
+      event.preventDefault()
+    })
+    ```
+  </Accordion>
+  
+  <Accordion title="Stop propagation for child elements">
+    When a child element handles a mouse event, stop it from propagating to the parent:
+    
+    ```typescript
+    childButton.on('mouse:down', (event) => {
+      this.handleButtonClick()
+      event.stopPropagation() // Don't trigger parent's click handler
+    })
+    ```
+  </Accordion>
+  
+  <Accordion title="Use hover events for visual feedback">
+    Provide visual feedback when users hover over interactive elements:
+    
+    ```typescript
+    this.on('mouse:over', (event) => {
+      this.setStyle({ backgroundColor: 'highlight' })
+    })
+    
+    this.on('mouse:out', (event) => {
+      this.setStyle({ backgroundColor: 'normal' })
+    })
+    ```
+  </Accordion>
+  
+  <Accordion title="Check modifiers for advanced interactions">
+    Use keyboard modifiers to provide different behaviors:
+    
+    ```typescript
+    this.on('mouse:down', (event) => {
+      if (event.modifiers.ctrl) {
+        this.multiSelect()
+      } else if (event.modifiers.shift) {
+        this.rangeSelect()
+      } else {
+        this.singleSelect()
+      }
+    })
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Terminal Compatibility
+
+Most modern terminals support mouse input, including:
+
+- iTerm2 (macOS)
+- Windows Terminal
+- Alacritty
+- Kitty
+- GNOME Terminal
+- Konsole
+- tmux (with mouse mode enabled)
+
+Some legacy terminals may have limited or no mouse support.

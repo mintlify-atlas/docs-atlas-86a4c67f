@@ -1,0 +1,567 @@
+---
+title: React
+description: Build terminal UIs with React using OpenTUI's React reconciler
+icon: react
+---
+
+OpenTUI React is a custom React reconciler that lets you build terminal user interfaces using familiar React patterns, hooks, and components.
+
+## Installation
+
+<CodeGroup>
+
+```bash npm
+npm install @opentui/react @opentui/core react
+```
+
+```bash yarn
+yarn add @opentui/react @opentui/core react
+```
+
+```bash pnpm
+pnpm add @opentui/react @opentui/core react
+```
+
+```bash bun
+bun add @opentui/react @opentui/core react
+```
+
+</CodeGroup>
+
+<Info>
+Quick start with [create-tui](https://github.com/msmps/create-tui):
+```bash
+bun create tui --template react
+```
+</Info>
+
+## TypeScript Configuration
+
+Configure your `tsconfig.json` for optimal TypeScript support:
+
+```json tsconfig.json
+{
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM"],
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "jsxImportSource": "@opentui/react",
+    "strict": true,
+    "skipLibCheck": true
+  }
+}
+```
+
+## Basic Usage
+
+Create and render a simple React application:
+
+```tsx index.tsx
+import { createCliRenderer } from "@opentui/core"
+import { createRoot } from "@opentui/react"
+
+function App() {
+  return <text>Hello, OpenTUI!</text>
+}
+
+const renderer = await createCliRenderer()
+createRoot(renderer).render(<App />)
+```
+
+## Rendering
+
+### createRoot
+
+Creates a root for rendering a React tree with a CLI renderer.
+
+```tsx
+import { createCliRenderer } from "@opentui/core"
+import { createRoot } from "@opentui/react"
+
+const renderer = await createCliRenderer({
+  exitOnCtrlC: false,
+})
+
+const root = createRoot(renderer)
+root.render(<App />)
+```
+
+**Parameters:**
+- `renderer` - A `CliRenderer` instance created with `createCliRenderer()`
+
+**Returns:** An object with:
+- `render(node)` - Renders a React element
+- `unmount()` - Unmounts the React tree
+
+### createPortal
+
+Render children into a different part of the component tree:
+
+```tsx
+import { createPortal, useRenderer } from "@opentui/react"
+
+function Modal({ children }) {
+  const renderer = useRenderer()
+  
+  return createPortal(
+    <box border title="Modal">
+      {children}
+    </box>,
+    renderer.root
+  )
+}
+```
+
+## Core Hooks
+
+### useRenderer
+
+Access the OpenTUI renderer instance:
+
+```tsx
+import { useRenderer } from "@opentui/react"
+import { useEffect } from "react"
+
+function App() {
+  const renderer = useRenderer()
+
+  useEffect(() => {
+    renderer.console.show()
+    console.log("Hello from console!")
+  }, [renderer])
+
+  return <box />
+}
+```
+
+### useKeyboard
+
+Handle keyboard input with press and release events:
+
+```tsx
+import { useKeyboard } from "@opentui/react"
+import { useState } from "react"
+
+function App() {
+  const [pressed, setPressed] = useState<Set<string>>(new Set())
+
+  useKeyboard((event) => {
+    if (event.eventType === "release") {
+      setPressed(prev => {
+        const next = new Set(prev)
+        next.delete(event.name)
+        return next
+      })
+    } else {
+      setPressed(prev => new Set(prev).add(event.name))
+    }
+  }, { release: true })
+
+  return (
+    <text>
+      Pressed: {Array.from(pressed).join(", ") || "none"}
+    </text>
+  )
+}
+```
+
+**Parameters:**
+- `handler` - Callback receiving a `KeyEvent` object
+- `options?` - Optional configuration:
+  - `release?: boolean` - Include key release events (default: `false`)
+
+<Note>
+By default, only press events are received (including repeats with `repeated: true`). Set `options.release = true` to also receive release events.
+</Note>
+
+### useOnResize
+
+Handle terminal resize events:
+
+```tsx
+import { useOnResize, useRenderer } from "@opentui/react"
+import { useEffect } from "react"
+
+function App() {
+  const renderer = useRenderer()
+
+  useEffect(() => {
+    renderer.console.show()
+  }, [renderer])
+
+  useOnResize((width, height) => {
+    console.log(`Resized to ${width}x${height}`)
+  })
+
+  return <text>Resize-aware component</text>
+}
+```
+
+### useTerminalDimensions
+
+Get current terminal dimensions with automatic updates:
+
+```tsx
+import { useTerminalDimensions } from "@opentui/react"
+
+function App() {
+  const { width, height } = useTerminalDimensions()
+
+  return (
+    <box>
+      <text>Terminal: {width}x{height}</text>
+      <box
+        style={{
+          width: Math.floor(width / 2),
+          height: Math.floor(height / 3)
+        }}
+      >
+        <text>Half-width, third-height box</text>
+      </box>
+    </box>
+  )
+}
+```
+
+**Returns:** `{ width: number, height: number }`
+
+### useTimeline
+
+Create and manage animations using OpenTUI's timeline system:
+
+```tsx
+import { useTimeline } from "@opentui/react"
+import { useEffect, useState } from "react"
+
+function App() {
+  const [width, setWidth] = useState(0)
+
+  const timeline = useTimeline({
+    duration: 2000,
+    loop: false,
+  })
+
+  useEffect(() => {
+    timeline.add(
+      { width },
+      {
+        width: 50,
+        duration: 2000,
+        ease: "linear",
+        onUpdate: (animation) => {
+          setWidth(animation.targets[0].width)
+        },
+      }
+    )
+  }, [])
+
+  return <box style={{ width, backgroundColor: "#6a5acd" }} />
+}
+```
+
+**Parameters:**
+- `options?` - Optional `TimelineOptions`:
+  - `duration?: number` - Animation duration in ms (default: 1000)
+  - `loop?: boolean` - Whether to loop (default: false)
+  - `autoplay?: boolean` - Auto-start timeline (default: true)
+  - `onComplete?: () => void` - Completion callback
+  - `onPause?: () => void` - Pause callback
+
+**Returns:** `Timeline` instance with methods:
+- `add(target, properties, startTime)` - Add animation
+- `play()` - Start timeline
+- `pause()` - Pause timeline
+- `restart()` - Restart from beginning
+
+## Components
+
+OpenTUI React provides intrinsic JSX elements that map to OpenTUI renderables:
+
+### Layout & Display
+
+- `<text>` - Display styled text
+- `<box>` - Container with borders and layout
+- `<scrollbox>` - Scrollable container
+- `<ascii-font>` - ASCII art text renderer
+
+### Input Components
+
+- `<input>` - Single-line text input
+- `<textarea>` - Multi-line text input
+- `<select>` - Dropdown selection
+- `<tab-select>` - Tab-based selection
+
+### Code & Diff
+
+- `<code>` - Syntax-highlighted code blocks
+- `<line-number>` - Line-numbered code with diff/diagnostics
+- `<diff>` - Unified or split diff viewer
+
+### Text Modifiers
+
+<Warning>
+These elements must be used inside a `<text>` component:
+</Warning>
+
+- `<span>` - Inline styled text
+- `<strong>`, `<b>` - Bold text
+- `<em>`, `<i>` - Italic text
+- `<u>` - Underlined text
+- `<br>` - Line break
+- `<a>` - Link with `href` attribute
+
+See the [Components](/components/overview) section for detailed documentation on each component.
+
+## Examples
+
+### Login Form
+
+```tsx
+import { createCliRenderer } from "@opentui/core"
+import { createRoot, useKeyboard } from "@opentui/react"
+import { useCallback, useState } from "react"
+
+function App() {
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
+  const [focused, setFocused] = useState<"username" | "password">("username")
+  const [status, setStatus] = useState("idle")
+
+  useKeyboard((key) => {
+    if (key.name === "tab") {
+      setFocused(prev => prev === "username" ? "password" : "username")
+    }
+  })
+
+  const handleSubmit = useCallback(() => {
+    if (username === "admin" && password === "secret") {
+      setStatus("success")
+    } else {
+      setStatus("error")
+    }
+  }, [username, password])
+
+  return (
+    <box style={{ border: true, padding: 2, flexDirection: "column", gap: 1 }}>
+      <text fg="#FFFF00">Login Form</text>
+
+      <box title="Username" style={{ border: true, width: 40, height: 3 }}>
+        <input
+          placeholder="Enter username..."
+          onInput={setUsername}
+          onSubmit={handleSubmit}
+          focused={focused === "username"}
+        />
+      </box>
+
+      <box title="Password" style={{ border: true, width: 40, height: 3 }}>
+        <input
+          placeholder="Enter password..."
+          onInput={setPassword}
+          onSubmit={handleSubmit}
+          focused={focused === "password"}
+        />
+      </box>
+
+      <text style={{
+        fg: status === "success" ? "green" : status === "error" ? "red" : "#999"
+      }}>
+        {status.toUpperCase()}
+      </text>
+    </box>
+  )
+}
+
+const renderer = await createCliRenderer()
+createRoot(renderer).render(<App />)
+```
+
+### Animated System Monitor
+
+```tsx
+import { createCliRenderer, TextAttributes } from "@opentui/core"
+import { createRoot, useTimeline } from "@opentui/react"
+import { useEffect, useState } from "react"
+
+type Stats = {
+  cpu: number
+  memory: number
+  network: number
+  disk: number
+}
+
+function App() {
+  const [stats, setStats] = useState<Stats>({
+    cpu: 0,
+    memory: 0,
+    network: 0,
+    disk: 0,
+  })
+
+  const timeline = useTimeline({
+    duration: 3000,
+    loop: false,
+  })
+
+  useEffect(() => {
+    timeline.add(
+      stats,
+      {
+        cpu: 85,
+        memory: 70,
+        network: 95,
+        disk: 60,
+        duration: 3000,
+        ease: "linear",
+        onUpdate: (values) => {
+          setStats({ ...values.targets[0] })
+        },
+      },
+      0
+    )
+  }, [])
+
+  const statsMap = [
+    { name: "CPU", key: "cpu", color: "#6a5acd" },
+    { name: "Memory", key: "memory", color: "#4682b4" },
+    { name: "Network", key: "network", color: "#20b2aa" },
+    { name: "Disk", key: "disk", color: "#daa520" },
+  ]
+
+  return (
+    <box
+      title="System Monitor"
+      style={{
+        margin: 1,
+        padding: 1,
+        border: true,
+        borderStyle: "single",
+        borderColor: "#4a4a4a",
+      }}
+    >
+      {statsMap.map(stat => (
+        <box key={stat.key}>
+          <box flexDirection="row" justifyContent="space-between">
+            <text>{stat.name}</text>
+            <text attributes={TextAttributes.DIM}>
+              {Math.round(stats[stat.key as keyof Stats])}%
+            </text>
+          </box>
+          <box style={{ backgroundColor: "#333333" }}>
+            <box
+              style={{
+                width: `${stats[stat.key as keyof Stats]}%`,
+                height: 1,
+                backgroundColor: stat.color
+              }}
+            />
+          </box>
+        </box>
+      ))}
+    </box>
+  )
+}
+
+const renderer = await createCliRenderer()
+createRoot(renderer).render(<App />)
+```
+
+## Extending Components
+
+Create custom components by extending OpenTUI's base renderables:
+
+```tsx
+import {
+  BoxRenderable,
+  createCliRenderer,
+  OptimizedBuffer,
+  RGBA,
+  type BoxOptions,
+  type RenderContext,
+} from "@opentui/core"
+import { createRoot, extend } from "@opentui/react"
+
+class ButtonRenderable extends BoxRenderable {
+  private _label: string = "Button"
+
+  constructor(ctx: RenderContext, options: BoxOptions & { label?: string }) {
+    super(ctx, {
+      border: true,
+      borderStyle: "single",
+      minHeight: 3,
+      ...options,
+    })
+
+    if (options.label) {
+      this._label = options.label
+    }
+  }
+
+  protected renderSelf(buffer: OptimizedBuffer): void {
+    super.renderSelf(buffer)
+
+    const centerX = this.x + Math.floor(this.width / 2 - this._label.length / 2)
+    const centerY = this.y + Math.floor(this.height / 2)
+
+    buffer.drawText(this._label, centerX, centerY, RGBA.fromInts(255, 255, 255, 255))
+  }
+
+  set label(value: string) {
+    this._label = value
+    this.requestRender()
+  }
+}
+
+// Add TypeScript support
+declare module "@opentui/react" {
+  interface OpenTUIComponents {
+    consoleButton: typeof ButtonRenderable
+  }
+}
+
+// Register the component
+extend({ consoleButton: ButtonRenderable })
+
+// Use in JSX
+function App() {
+  return (
+    <box>
+      <consoleButton label="Click me!" style={{ backgroundColor: "blue" }} />
+      <consoleButton label="Another button" style={{ backgroundColor: "green" }} />
+    </box>
+  )
+}
+
+const renderer = await createCliRenderer()
+createRoot(renderer).render(<App />)
+```
+
+## React DevTools
+
+OpenTUI React supports [React DevTools](https://github.com/facebook/react/tree/master/packages/react-devtools) for debugging:
+
+1. Install the optional peer dependency:
+
+```bash
+bun add --dev react-devtools-core@7
+```
+
+2. Start the standalone DevTools:
+
+```bash
+npx react-devtools@7
+```
+
+3. Run your app with the `DEV` environment variable:
+
+```bash
+DEV=true bun run your-app.ts
+```
+
+After the app starts, you'll see the component tree in React DevTools. You can inspect and modify props in real-time.
+
+<Warning>
+When DevTools is connected, the WebSocket connection may prevent your process from exiting naturally. Use `process.exit()` or close DevTools to terminate the process.
+</Warning>

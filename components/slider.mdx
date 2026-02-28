@@ -1,0 +1,432 @@
+---
+title: Slider
+description: A draggable slider component for numeric input with mouse and viewport support
+---
+
+## Overview
+
+The `SliderRenderable` component provides a visual slider for selecting numeric values within a range. It supports both horizontal and vertical orientations, mouse dragging, and viewport-based thumb sizing.
+
+## Basic Usage
+
+```typescript
+import { Screen, SliderRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const slider = new SliderRenderable(ctx, {
+  x: 10,
+  y: 5,
+  width: 30,
+  height: 1,
+  orientation: "horizontal",
+  min: 0,
+  max: 100,
+  value: 50,
+  onChange: (value) => {
+    console.log("Value changed:", value)
+  },
+})
+
+screen.append(slider)
+```
+
+## Props
+
+<ParamField path="orientation" type="'horizontal' | 'vertical'" required>
+  Slider orientation (required)
+</ParamField>
+
+<ParamField path="value" type="number" default="min">
+  Initial value
+</ParamField>
+
+<ParamField path="min" type="number" default="0">
+  Minimum value
+</ParamField>
+
+<ParamField path="max" type="number" default="100">
+  Maximum value
+</ParamField>
+
+<ParamField path="viewPortSize" type="number" default="(max - min) * 0.1">
+  Size of the viewport, affects thumb size. Larger viewport = larger thumb.
+</ParamField>
+
+<ParamField path="backgroundColor" type="ColorInput" default="'#252527'">
+  Track background color
+</ParamField>
+
+<ParamField path="foregroundColor" type="ColorInput" default="'#9a9ea3'">
+  Thumb color
+</ParamField>
+
+<ParamField path="onChange" type="(value: number) => void">
+  Callback fired when value changes
+</ParamField>
+
+## Events
+
+### change
+
+Fired when the slider value changes.
+
+```typescript
+slider.on("change", (event: { value: number }) => {
+  console.log("New value:", event.value)
+})
+```
+
+## Methods
+
+### value
+
+Get or set the slider value.
+
+```typescript
+// Get current value
+const currentValue = slider.value
+
+// Set value
+slider.value = 75
+```
+
+### min / max
+
+Get or set the minimum and maximum values.
+
+```typescript
+slider.min = 0
+slider.max = 200
+```
+
+### viewPortSize
+
+Get or set the viewport size (affects thumb size).
+
+```typescript
+slider.viewPortSize = 20
+```
+
+### backgroundColor / foregroundColor
+
+Get or set colors.
+
+```typescript
+slider.backgroundColor = "#1a1a1a"
+slider.foregroundColor = "#00ff00"
+```
+
+## Behavior
+
+### Mouse Interaction
+
+- **Click on thumb**: Drag to change value
+- **Click on track**: Jump to that position and start dragging
+- **Drag**: Hold and move mouse to adjust value
+
+### Viewport Size
+
+The `viewPortSize` property determines the size of the thumb relative to the track. This is useful for representing scrollable content:
+
+- Larger viewport = larger thumb
+- When viewport equals the range, thumb fills the entire track
+- Common for scrollbars where viewport represents visible content
+
+### Rendering
+
+The slider uses sub-character precision with Unicode block characters for smooth rendering:
+
+- Horizontal: Uses `▌`, `▐`, `█` for half-cell precision
+- Vertical: Uses `▀`, `▄`, `█` for half-cell precision
+
+## Examples
+
+### Horizontal Volume Slider
+
+```typescript
+import { Screen, SliderRenderable, TextRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const label = new TextRenderable(ctx, {
+  x: 5,
+  y: 5,
+  text: "Volume: 50",
+})
+
+const slider = new SliderRenderable(ctx, {
+  x: 5,
+  y: 6,
+  width: 40,
+  height: 1,
+  orientation: "horizontal",
+  min: 0,
+  max: 100,
+  value: 50,
+  backgroundColor: "#1a1a1a",
+  foregroundColor: "#00ff00",
+  onChange: (value) => {
+    label.text = `Volume: ${Math.round(value)}`
+  },
+})
+
+screen.append(label, slider)
+```
+
+### Vertical Scrollbar
+
+```typescript
+import { Screen, SliderRenderable, TextRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+// Simulate content with 200 lines, viewport shows 20 at a time
+const totalLines = 200
+const visibleLines = 20
+
+const content = new TextRenderable(ctx, {
+  x: 2,
+  y: 2,
+  width: 60,
+  text: "Content area (scroll with scrollbar)",
+})
+
+const scrollbar = new SliderRenderable(ctx, {
+  x: 65,
+  y: 2,
+  width: 1,
+  height: 20,
+  orientation: "vertical",
+  min: 0,
+  max: totalLines - visibleLines,
+  value: 0,
+  viewPortSize: visibleLines,
+  onChange: (value) => {
+    console.log(`Scroll position: ${Math.round(value)}`)
+  },
+})
+
+screen.append(content, scrollbar)
+```
+
+### RGB Color Picker
+
+```typescript
+import { Screen, SliderRenderable, TextRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const color = { r: 128, g: 128, b: 128 }
+
+const preview = new TextRenderable(ctx, {
+  x: 5,
+  y: 2,
+  width: 20,
+  height: 3,
+  text: "Color Preview",
+  backgroundColor: `rgb(${color.r}, ${color.g}, ${color.b})`,
+})
+
+function updateColor() {
+  preview.backgroundColor = `rgb(${color.r}, ${color.g}, ${color.b})`
+  rgbLabel.text = `RGB: (${color.r}, ${color.g}, ${color.b})`
+}
+
+const redLabel = new TextRenderable(ctx, { x: 5, y: 6, text: "Red:" })
+const redSlider = new SliderRenderable(ctx, {
+  x: 15,
+  y: 6,
+  width: 30,
+  height: 1,
+  orientation: "horizontal",
+  min: 0,
+  max: 255,
+  value: color.r,
+  foregroundColor: "#ff0000",
+  onChange: (value) => {
+    color.r = Math.round(value)
+    updateColor()
+  },
+})
+
+const greenLabel = new TextRenderable(ctx, { x: 5, y: 8, text: "Green:" })
+const greenSlider = new SliderRenderable(ctx, {
+  x: 15,
+  y: 8,
+  width: 30,
+  height: 1,
+  orientation: "horizontal",
+  min: 0,
+  max: 255,
+  value: color.g,
+  foregroundColor: "#00ff00",
+  onChange: (value) => {
+    color.g = Math.round(value)
+    updateColor()
+  },
+})
+
+const blueLabel = new TextRenderable(ctx, { x: 5, y: 10, text: "Blue:" })
+const blueSlider = new SliderRenderable(ctx, {
+  x: 15,
+  y: 10,
+  width: 30,
+  height: 1,
+  orientation: "horizontal",
+  min: 0,
+  max: 255,
+  value: color.b,
+  foregroundColor: "#0000ff",
+  onChange: (value) => {
+    color.b = Math.round(value)
+    updateColor()
+  },
+})
+
+const rgbLabel = new TextRenderable(ctx, {
+  x: 5,
+  y: 12,
+  text: `RGB: (${color.r}, ${color.g}, ${color.b})`,
+})
+
+screen.append(
+  preview,
+  redLabel, redSlider,
+  greenLabel, greenSlider,
+  blueLabel, blueSlider,
+  rgbLabel
+)
+```
+
+### Temperature Control
+
+```typescript
+import { Screen, SliderRenderable, TextRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const title = new TextRenderable(ctx, {
+  x: 10,
+  y: 3,
+  text: "Thermostat Control",
+  textColor: "#FFFF00",
+})
+
+const tempDisplay = new TextRenderable(ctx, {
+  x: 10,
+  y: 5,
+  text: "72°F",
+  textColor: "#00FF00",
+})
+
+const tempSlider = new SliderRenderable(ctx, {
+  x: 10,
+  y: 7,
+  width: 40,
+  height: 2,
+  orientation: "horizontal",
+  min: 60,
+  max: 85,
+  value: 72,
+  backgroundColor: "#1a1a2e",
+  foregroundColor: "#ff6b6b",
+  onChange: (value) => {
+    const temp = Math.round(value)
+    tempDisplay.text = `${temp}°F`
+    
+    // Change color based on temperature
+    if (temp < 68) {
+      tempDisplay.textColor = "#0099ff" // Cool
+    } else if (temp > 76) {
+      tempDisplay.textColor = "#ff6666" // Hot
+    } else {
+      tempDisplay.textColor = "#00ff00" // Comfortable
+    }
+  },
+})
+
+const minLabel = new TextRenderable(ctx, { x: 10, y: 9, text: "60°F" })
+const maxLabel = new TextRenderable(ctx, { x: 46, y: 9, text: "85°F" })
+
+screen.append(title, tempDisplay, tempSlider, minLabel, maxLabel)
+```
+
+### Opacity Control
+
+```typescript
+import { Screen, SliderRenderable, TextRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+let opacity = 1.0
+
+const preview = new TextRenderable(ctx, {
+  x: 10,
+  y: 5,
+  width: 30,
+  height: 5,
+  text: "Preview Content",
+  backgroundColor: "#3344ff",
+})
+
+const opacityLabel = new TextRenderable(ctx, {
+  x: 10,
+  y: 11,
+  text: "Opacity: 100%",
+})
+
+const opacitySlider = new SliderRenderable(ctx, {
+  x: 10,
+  y: 12,
+  width: 30,
+  height: 1,
+  orientation: "horizontal",
+  min: 0,
+  max: 100,
+  value: 100,
+  onChange: (value) => {
+    opacity = value / 100
+    opacityLabel.text = `Opacity: ${Math.round(value)}%`
+    // In real use, you'd apply opacity to the preview
+  },
+})
+
+screen.append(preview, opacityLabel, opacitySlider)
+```
+
+## Advanced Usage
+
+### Custom Rendering
+
+The slider uses a virtual coordinate system (2x resolution) internally for smooth sub-character rendering. You generally don't need to worry about this, but it enables smooth dragging and precise thumb positioning.
+
+### Viewport-based Sizing
+
+For scrollbar use cases:
+
+```typescript
+const scrollbar = new SliderRenderable(ctx, {
+  orientation: "vertical",
+  min: 0,
+  max: totalContentHeight - viewportHeight,
+  value: currentScrollPosition,
+  viewPortSize: viewportHeight,
+})
+```
+
+The thumb size will automatically adjust based on the ratio of viewport to content:
+- Small viewport relative to content = small thumb
+- Large viewport relative to content = large thumb
+
+## Related Components
+
+- [Input](/components/input) - Single-line text input
+- [Select](/components/select) - Dropdown selection
+- [TabSelect](/components/tabselect) - Tab navigation

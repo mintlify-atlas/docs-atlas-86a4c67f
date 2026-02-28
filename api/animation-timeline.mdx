@@ -1,0 +1,395 @@
+---
+title: "Animation Timeline"
+description: "Timeline animation system for creating complex animations with easing, looping, and callbacks"
+---
+
+## Overview
+
+The Timeline animation system provides a powerful way to create complex animations in OpenTUI. It supports property animations, easing functions, looping, callbacks, and nested timelines.
+
+## Creating a Timeline
+
+### createTimeline()
+
+Creates and registers a new timeline with the animation engine.
+
+```typescript
+import { createTimeline } from "@opentui/core"
+
+const timeline = createTimeline({
+  duration: 2000,
+  loop: true,
+  autoplay: true,
+  onComplete: () => console.log("Animation complete"),
+  onPause: () => console.log("Animation paused")
+})
+```
+
+<ParamField path="options" type="TimelineOptions" default="{}">
+  Configuration options for the timeline
+  
+  <Expandable title="properties">
+    <ParamField path="duration" type="number" default="1000">
+      Total duration of the timeline in milliseconds
+    </ParamField>
+    
+    <ParamField path="loop" type="boolean" default="false">
+      Whether the timeline should loop indefinitely
+    </ParamField>
+    
+    <ParamField path="autoplay" type="boolean" default="true">
+      Whether to start playing the timeline immediately
+    </ParamField>
+    
+    <ParamField path="onComplete" type="() => void">
+      Callback fired when the timeline completes
+    </ParamField>
+    
+    <ParamField path="onPause" type="() => void">
+      Callback fired when the timeline is paused
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="timeline" type="Timeline">
+  A new Timeline instance registered with the animation engine
+</ResponseField>
+
+## Timeline Class
+
+### add()
+
+Adds an animation to the timeline at a specific start time.
+
+```typescript
+timeline.add(
+  targetObject,
+  {
+    x: 100,
+    y: 50,
+    duration: 1000,
+    ease: "outExpo",
+    onUpdate: (animation) => console.log(animation.progress),
+    onComplete: () => console.log("Animation finished")
+  },
+  0 // start time
+)
+```
+
+<ParamField path="target" type="any" required>
+  The object or array of objects to animate. Can be any object with numeric properties.
+</ParamField>
+
+<ParamField path="properties" type="AnimationOptions" required>
+  Animation properties and options
+  
+  <Expandable title="properties">
+    <ParamField path="duration" type="number" default="1000">
+      Duration of the animation in milliseconds
+    </ParamField>
+    
+    <ParamField path="ease" type="EasingFunctions" default="linear">
+      Easing function to use. Available options:
+      - `linear` - No easing
+      - `inQuad`, `outQuad`, `inOutQuad` - Quadratic easing
+      - `inExpo`, `outExpo` - Exponential easing
+      - `inOutSine` - Sinusoidal easing
+      - `outBounce`, `inBounce` - Bounce easing
+      - `outElastic` - Elastic easing
+      - `inCirc`, `outCirc`, `inOutCirc` - Circular easing
+      - `inBack`, `outBack`, `inOutBack` - Back easing
+    </ParamField>
+    
+    <ParamField path="loop" type="boolean | number" default="false">
+      Whether to loop the animation. Can be:
+      - `false` - No looping
+      - `true` - Loop infinitely
+      - `number` - Loop a specific number of times
+    </ParamField>
+    
+    <ParamField path="loopDelay" type="number" default="0">
+      Delay in milliseconds between loop iterations
+    </ParamField>
+    
+    <ParamField path="alternate" type="boolean" default="false">
+      If true, animation reverses direction on alternate loops (ping-pong effect)
+    </ParamField>
+    
+    <ParamField path="onUpdate" type="(animation: JSAnimation) => void">
+      Callback fired on each frame of the animation
+    </ParamField>
+    
+    <ParamField path="onComplete" type="() => void">
+      Callback fired when the animation completes
+    </ParamField>
+    
+    <ParamField path="onStart" type="() => void">
+      Callback fired when the animation starts
+    </ParamField>
+    
+    <ParamField path="onLoop" type="() => void">
+      Callback fired on each loop iteration
+    </ParamField>
+    
+    <ParamField path="[propertyName]" type="number">
+      Any numeric property name can be animated by providing its target value
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="startTime" type="number | string" default="0">
+  When to start the animation in milliseconds from the timeline start
+</ParamField>
+
+<ResponseField name="this" type="Timeline">
+  Returns the timeline instance for method chaining
+</ResponseField>
+
+### once()
+
+Adds a one-time animation that starts at the current timeline position and is automatically removed when complete.
+
+```typescript
+timeline.once(box, {
+  opacity: 0,
+  duration: 500,
+  ease: "outQuad"
+})
+```
+
+<ParamField path="target" type="any" required>
+  The object to animate
+</ParamField>
+
+<ParamField path="properties" type="AnimationOptions" required>
+  Animation properties (same as `add()` method)
+</ParamField>
+
+<ResponseField name="this" type="Timeline">
+  Returns the timeline instance for method chaining
+</ResponseField>
+
+### call()
+
+Adds a callback function to be executed at a specific time in the timeline.
+
+```typescript
+timeline.call(() => {
+  console.log("This executes at 1 second")
+}, 1000)
+```
+
+<ParamField path="callback" type="() => void" required>
+  Function to execute
+</ParamField>
+
+<ParamField path="startTime" type="number | string" default="0">
+  When to execute the callback in milliseconds from the timeline start
+</ParamField>
+
+<ResponseField name="this" type="Timeline">
+  Returns the timeline instance for method chaining
+</ResponseField>
+
+### sync()
+
+Synchronizes another timeline to start at a specific time in this timeline.
+
+```typescript
+const subTimeline = new Timeline({ duration: 1000 })
+timeline.sync(subTimeline, 500) // Start sub-timeline at 500ms
+```
+
+<ParamField path="timeline" type="Timeline" required>
+  The timeline to synchronize
+</ParamField>
+
+<ParamField path="startTime" type="number" default="0">
+  When to start the synchronized timeline in milliseconds
+</ParamField>
+
+<ResponseField name="this" type="Timeline">
+  Returns the timeline instance for method chaining
+</ResponseField>
+
+### play()
+
+Starts or resumes playback of the timeline.
+
+```typescript
+timeline.play()
+```
+
+<ResponseField name="this" type="Timeline">
+  Returns the timeline instance for method chaining
+</ResponseField>
+
+### pause()
+
+Pauses playback of the timeline.
+
+```typescript
+timeline.pause()
+```
+
+<ResponseField name="this" type="Timeline">
+  Returns the timeline instance for method chaining
+</ResponseField>
+
+### restart()
+
+Restarts the timeline from the beginning.
+
+```typescript
+timeline.restart()
+```
+
+<ResponseField name="this" type="Timeline">
+  Returns the timeline instance for method chaining
+</ResponseField>
+
+### update()
+
+Manually updates the timeline by a delta time. This is typically called automatically by the animation engine.
+
+```typescript
+timeline.update(16.67) // Update by ~16ms (60fps)
+```
+
+<ParamField path="deltaTime" type="number" required>
+  Time elapsed in milliseconds since last update
+</ParamField>
+
+## Timeline Properties
+
+<ResponseField name="currentTime" type="number">
+  Current playback position in milliseconds
+</ResponseField>
+
+<ResponseField name="isPlaying" type="boolean">
+  Whether the timeline is currently playing
+</ResponseField>
+
+<ResponseField name="isComplete" type="boolean">
+  Whether the timeline has completed playback
+</ResponseField>
+
+<ResponseField name="duration" type="number">
+  Total duration of the timeline in milliseconds
+</ResponseField>
+
+<ResponseField name="loop" type="boolean">
+  Whether the timeline loops
+</ResponseField>
+
+## Timeline Engine
+
+The global animation engine manages all timelines and integrates with the renderer.
+
+### engine.attach()
+
+Attaches the engine to a CLI renderer to synchronize with frame updates.
+
+```typescript
+import { engine } from "@opentui/core"
+
+engine.attach(renderer)
+```
+
+<ParamField path="renderer" type="CliRenderer" required>
+  The renderer to attach to
+</ParamField>
+
+### engine.register()
+
+Manually registers a timeline with the engine.
+
+```typescript
+const timeline = new Timeline({ duration: 1000 })
+engine.register(timeline)
+```
+
+<ParamField path="timeline" type="Timeline" required>
+  The timeline to register
+</ParamField>
+
+### engine.unregister()
+
+Unregisters a timeline from the engine.
+
+```typescript
+engine.unregister(timeline)
+```
+
+<ParamField path="timeline" type="Timeline" required>
+  The timeline to unregister
+</ParamField>
+
+### engine.clear()
+
+Unregisters all timelines from the engine.
+
+```typescript
+engine.clear()
+```
+
+## JSAnimation Interface
+
+The animation object passed to `onUpdate` callbacks.
+
+<ResponseField name="targets" type="any[]">
+  Array of objects being animated
+</ResponseField>
+
+<ResponseField name="progress" type="number">
+  Current progress of the animation (0-1), after easing is applied
+</ResponseField>
+
+<ResponseField name="currentTime" type="number">
+  Current timeline time in milliseconds
+</ResponseField>
+
+<ResponseField name="deltaTime" type="number">
+  Time elapsed since last frame in milliseconds
+</ResponseField>
+
+## Example: Complex Animation
+
+```typescript
+import { createTimeline } from "@opentui/core"
+
+const box = { x: 0, y: 0, opacity: 1 }
+
+const timeline = createTimeline({
+  duration: 3000,
+  loop: true,
+  onComplete: () => console.log("Loop complete")
+})
+
+// Move right
+timeline.add(box, {
+  x: 100,
+  duration: 1000,
+  ease: "outExpo"
+}, 0)
+
+// Move down while fading
+timeline.add(box, {
+  y: 50,
+  opacity: 0.5,
+  duration: 1000,
+  ease: "inOutQuad"
+}, 1000)
+
+// Callback
+timeline.call(() => {
+  console.log("Halfway through!")
+}, 1500)
+
+// Fade back in
+timeline.add(box, {
+  opacity: 1,
+  duration: 500,
+  ease: "linear"
+}, 2500)
+```

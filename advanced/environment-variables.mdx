@@ -1,0 +1,485 @@
+---
+title: Environment Variables
+description: Configure OpenTUI behavior using environment variables
+---
+
+OpenTUI can be configured using environment variables to control rendering behavior, debugging features, and terminal capabilities.
+
+## Setting Environment Variables
+
+### In Shell
+
+```bash
+# Set for current session
+export OTUI_DEBUG=true
+
+# Set for single command
+OTUI_DEBUG=true bun run app.ts
+```
+
+### In Code
+
+```typescript
+// Set before creating renderer
+process.env.OTUI_DEBUG = 'true'
+process.env.OTUI_SHOW_STATS = 'true'
+
+const renderer = await createCliRenderer()
+```
+
+### In .env File
+
+```bash
+# .env
+OTUI_DEBUG=true
+OTUI_SHOW_STATS=true
+OTUI_USE_CONSOLE=false
+```
+
+<Note>
+  Bun automatically loads `.env` files - no need for dotenv package.
+</Note>
+
+## Debugging Variables
+
+### OTUI_DEBUG
+
+Enable debug mode to capture all raw input for debugging purposes.
+
+**Type:** `boolean`  
+**Default:** `false`
+
+```bash
+export OTUI_DEBUG=true
+```
+
+When enabled:
+- Captures raw terminal input
+- Logs input sequences
+- Useful for debugging keyboard/mouse issues
+
+### OTUI_DEBUG_FFI
+
+Enable debug logging for the FFI bindings between TypeScript and Zig.
+
+**Type:** `boolean`  
+**Default:** `false`
+
+```bash
+export OTUI_DEBUG_FFI=true
+```
+
+Logs:
+- FFI function calls
+- Data passed between layers
+- Native function execution
+
+### OTUI_TRACE_FFI
+
+Enable detailed tracing for the FFI bindings.
+
+**Type:** `boolean`  
+**Default:** `false`
+
+```bash
+export OTUI_TRACE_FFI=true
+```
+
+Provides:
+- Detailed call traces
+- Performance metrics per call
+- Memory allocation tracking
+
+### OTUI_SHOW_STATS
+
+Show the debug overlay at startup.
+
+**Type:** `boolean`  
+**Default:** `false`
+
+```bash
+export OTUI_SHOW_STATS=true
+```
+
+Displays:
+- FPS counter
+- Frame time statistics
+- Memory usage
+- Render buffer info
+
+## Rendering Variables
+
+### OTUI_NO_NATIVE_RENDER
+
+Disable native rendering. Useful for debugging without actual terminal output.
+
+**Type:** `boolean`  
+**Default:** `false`
+
+```bash
+export OTUI_NO_NATIVE_RENDER=true
+```
+
+<Warning>
+  This will not output any ANSI sequences to the terminal. Only use for debugging.
+</Warning>
+
+### OTUI_USE_ALTERNATE_SCREEN
+
+Whether to use the alternate screen buffer.
+
+**Type:** `boolean`  
+**Default:** `true`
+
+```bash
+export OTUI_USE_ALTERNATE_SCREEN=false
+```
+
+When disabled:
+- Renders in main screen buffer
+- Content persists after exit
+- May interfere with terminal scrollback
+
+### OTUI_OVERRIDE_STDOUT
+
+Override the stdout stream. Useful for debugging.
+
+**Type:** `boolean`  
+**Default:** `true`
+
+```bash
+export OTUI_OVERRIDE_STDOUT=false
+```
+
+## Console Variables
+
+### OTUI_USE_CONSOLE
+
+Whether to use the built-in console. When disabled, console output is not captured.
+
+**Type:** `boolean`  
+**Default:** `true`
+
+```bash
+export OTUI_USE_CONSOLE=false
+```
+
+Disable if:
+- You don't need console.log capture
+- You want better performance
+- You're using external logging
+
+### SHOW_CONSOLE
+
+Show the console at startup.
+
+**Type:** `boolean`  
+**Default:** `false`
+
+```bash
+export SHOW_CONSOLE=true
+```
+
+### OTUI_DUMP_CAPTURES
+
+Dump captured console output when the renderer exits.
+
+**Type:** `boolean`  
+**Default:** `false`
+
+```bash
+export OTUI_DUMP_CAPTURES=true
+```
+
+## Terminal Compatibility Variables
+
+### OPENTUI_FORCE_EXPLICIT_WIDTH
+
+Force explicit width capability to true or false. Use this to fix artifacts on older terminals.
+
+**Type:** `string`  
+**Values:** `"true"`, `"1"`, `"false"`, `"0"`
+
+```bash
+# Disable explicit width (fixes OSC 66 artifacts)
+export OPENTUI_FORCE_EXPLICIT_WIDTH=false
+
+# Enable explicit width
+export OPENTUI_FORCE_EXPLICIT_WIDTH=true
+```
+
+<Tip>
+  Set to `false` or `0` on GNOME Terminal, Konsole, or xterm to prevent "66" artifacts.
+</Tip>
+
+When set to `"false"` or `"0"`:
+- Prevents OSC 66 detection queries
+- Disables explicit width feature
+- Falls back to standard width calculation
+- No visual artifacts on unsupported terminals
+
+### OPENTUI_FORCE_WCWIDTH
+
+Use wcwidth for character width calculations.
+
+**Type:** `boolean`  
+**Default:** `false`
+
+```bash
+export OPENTUI_FORCE_WCWIDTH=true
+```
+
+### OPENTUI_FORCE_UNICODE
+
+Force Mode 2026 Unicode support in terminal capabilities.
+
+**Type:** `boolean`  
+**Default:** `false`
+
+```bash
+export OPENTUI_FORCE_UNICODE=true
+```
+
+### OPENTUI_FORCE_NOZWJ
+
+Use no_zwj width method (Unicode without ZWJ joining).
+
+**Type:** `boolean`  
+**Default:** `false`
+
+```bash
+export OPENTUI_FORCE_NOZWJ=true
+```
+
+### OPENTUI_GRAPHICS
+
+Enable Kitty graphics protocol detection.
+
+**Type:** `boolean`  
+**Default:** `true`
+
+```bash
+# Disable graphics detection
+export OPENTUI_GRAPHICS=false
+```
+
+## Tree-sitter Variables
+
+### OTUI_TS_STYLE_WARN
+
+Enable warnings for missing syntax styles.
+
+**Type:** `string`  
+**Default:** `false`
+
+```bash
+export OTUI_TS_STYLE_WARN=true
+```
+
+Useful when:
+- Developing syntax highlighting themes
+- Debugging missing style definitions
+- Auditing theme coverage
+
+### OTUI_TREE_SITTER_WORKER_PATH
+
+Path to the TreeSitter worker.
+
+**Type:** `string`  
+**Default:** `""`
+
+```bash
+export OTUI_TREE_SITTER_WORKER_PATH=/path/to/worker.js
+```
+
+## XDG Base Directory Variables
+
+### XDG_CONFIG_HOME
+
+Base directory for user-specific configuration files.
+
+**Type:** `string`  
+**Default:** `~/.config`
+
+```bash
+export XDG_CONFIG_HOME=~/.config
+```
+
+### XDG_DATA_HOME
+
+Base directory for user-specific data files.
+
+**Type:** `string`  
+**Default:** `~/.local/share`
+
+```bash
+export XDG_DATA_HOME=~/.local/share
+```
+
+## Common Configuration Scenarios
+
+### Development Mode
+
+```bash
+# .env.development
+OTUI_DEBUG=true
+OTUI_SHOW_STATS=true
+OTUI_USE_CONSOLE=true
+SHOW_CONSOLE=false
+OTUI_DEBUG_FFI=false
+```
+
+### Production Mode
+
+```bash
+# .env.production
+OTUI_DEBUG=false
+OTUI_SHOW_STATS=false
+OTUI_USE_CONSOLE=false
+OTUI_OVERRIDE_STDOUT=true
+```
+
+### Performance Testing
+
+```bash
+# .env.benchmark
+OTUI_SHOW_STATS=true
+OTUI_USE_CONSOLE=false
+OTUI_DEBUG_FFI=false
+OTUI_TRACE_FFI=false
+```
+
+### Debugging FFI Issues
+
+```bash
+# .env.debug-ffi
+OTUI_DEBUG=true
+OTUI_DEBUG_FFI=true
+OTUI_TRACE_FFI=true
+OTUI_DUMP_CAPTURES=true
+```
+
+### Legacy Terminal Compatibility
+
+```bash
+# .env.legacy-terminal
+OPENTUI_FORCE_EXPLICIT_WIDTH=false
+OPENTUI_GRAPHICS=false
+OPENTUI_FORCE_WCWIDTH=true
+```
+
+## Terminal-Specific Configurations
+
+### GNOME Terminal
+
+```bash
+export OPENTUI_FORCE_EXPLICIT_WIDTH=false
+```
+
+### Kitty / Ghostty / WezTerm
+
+```bash
+export OPENTUI_GRAPHICS=true
+export OPENTUI_FORCE_UNICODE=true
+```
+
+### Windows Terminal
+
+```bash
+export OPENTUI_GRAPHICS=false
+```
+
+### tmux / screen
+
+```bash
+export OPENTUI_GRAPHICS=false
+export OTUI_USE_ALTERNATE_SCREEN=true
+```
+
+## Loading Environment Files
+
+Bun automatically loads `.env` files in this order:
+
+1. `.env.local` (highest priority)
+2. `.env.{NODE_ENV}.local`
+3. `.env.{NODE_ENV}`
+4. `.env`
+
+Example project structure:
+
+```
+project/
+├── .env                 # Default values
+├── .env.development    # Development overrides
+├── .env.production     # Production overrides
+└── .env.local         # Local overrides (gitignored)
+```
+
+## Environment Variable Precedence
+
+1. **Command line** (highest priority)
+   ```bash
+   OTUI_DEBUG=true bun run app.ts
+   ```
+
+2. **Code**
+   ```typescript
+   process.env.OTUI_DEBUG = 'true'
+   ```
+
+3. **Environment files** (.env.local, .env)
+
+4. **Shell environment**
+   ```bash
+   export OTUI_DEBUG=true
+   ```
+
+5. **Default values** (lowest priority)
+
+## Troubleshooting
+
+### Artifacts on Screen
+
+If you see weird characters like "66" on screen:
+
+```bash
+export OPENTUI_FORCE_EXPLICIT_WIDTH=false
+```
+
+### Performance Issues
+
+Disable console capture:
+
+```bash
+export OTUI_USE_CONSOLE=false
+```
+
+### Missing Console Output
+
+Enable console:
+
+```bash
+export OTUI_USE_CONSOLE=true
+export SHOW_CONSOLE=true
+```
+
+### Debugging Not Working
+
+Enable debug features:
+
+```bash
+export OTUI_DEBUG=true
+export OTUI_DEBUG_FFI=true
+export OTUI_SHOW_STATS=true
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Performance" href="/advanced/performance" icon="gauge">
+    Optimize your application
+  </Card>
+  <Card title="Native Zig Core" href="/advanced/native-zig-core" icon="code">
+    Understand the architecture
+  </Card>
+</CardGroup>

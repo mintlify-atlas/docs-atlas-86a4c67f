@@ -1,0 +1,627 @@
+---
+title: 'FrameBuffer'
+description: 'Low-level rendering surface for custom graphics and complex visual effects'
+---
+
+## Overview
+
+The **FrameBuffer** (also called `OptimizedBuffer`) is OpenTUI's low-level rendering surface. It provides direct pixel-level access to the terminal buffer, allowing you to:
+
+- Draw custom graphics
+- Create complex visual effects
+- Implement custom renderables
+- Optimize rendering performance
+- Work with transparency and alpha blending
+
+Every renderable ultimately draws to a frame buffer, which is then output to the terminal.
+
+<Info>
+The FrameBuffer is implemented in native code (Zig) for maximum performance, but exposed to TypeScript with a clean API.
+</Info>
+
+## Creating a FrameBuffer
+
+### Standalone Buffer
+
+Create a buffer directly:
+
+```typescript
+import { OptimizedBuffer } from "@opentui/core"
+
+const buffer = OptimizedBuffer.create(
+  80,          // width in cells
+  24,          // height in cells
+  "unicode",   // width method: "unicode" | "wcwidth"
+  {
+    respectAlpha: true,   // Enable alpha blending
+    id: "my-buffer",      // Optional debug ID
+  }
+)
+```
+
+### FrameBuffer Renderable
+
+Use a renderable that wraps a buffer:
+
+```typescript
+import { FrameBufferRenderable, RGBA } from "@opentui/core"
+
+const canvas = new FrameBufferRenderable(renderer, {
+  id: "canvas",
+  width: 50,
+  height: 20,
+  position: "absolute",
+  left: 5,
+  top: 5,
+})
+
+// Access the underlying buffer
+canvas.frameBuffer.fillRect(0, 0, 10, 10, RGBA.fromHex("#FF0000"))
+
+renderer.root.add(canvas)
+```
+
+### Buffered Renderables
+
+Enable double-buffering for any renderable:
+
+```typescript
+import { BoxRenderable } from "@opentui/core"
+
+const buffered = new BoxRenderable(renderer, {
+  buffered: true,  // Enable internal frame buffer
+  width: 30,
+  height: 15,
+})
+
+// Access the buffer in render hooks
+const box = new BoxRenderable(renderer, {
+  buffered: true,
+  renderBefore(buffer) {
+    // `buffer` is the renderable's frame buffer
+    buffer.drawText(
+      "Custom rendering",
+      5, 5,
+      RGBA.fromHex("#FFFFFF")
+    )
+  },
+})
+```
+
+## Drawing Operations
+
+### Set Individual Cells
+
+```typescript
+import { RGBA, TextAttributes } from "@opentui/core"
+
+buffer.setCell(
+  10,                           // x position
+  5,                            // y position
+  "█",                          // character
+  RGBA.fromHex("#FFFFFF"),      // foreground color
+  RGBA.fromHex("#000000"),      // background color
+  TextAttributes.BOLD           // text attributes
+)
+```
+
+### Alpha Blending
+
+Set cells with alpha blending:
+
+```typescript
+buffer.setCellWithAlphaBlending(
+  10, 5,
+  "█",
+  RGBA.fromValues(1, 0, 0, 0.5),  // 50% transparent red
+  RGBA.fromValues(0, 0, 0, 0),    // Fully transparent background
+  0
+)
+```
+
+<Info>
+Alpha blending only works if the buffer was created with `respectAlpha: true`.
+</Info>
+
+### Draw Text
+
+```typescript
+buffer.drawText(
+  "Hello, World!",              // text content
+  10,                           // x position
+  5,                            // y position  
+  RGBA.fromHex("#00FF00"),      // foreground
+  RGBA.fromHex("#000000"),      // background (optional)
+  TextAttributes.UNDERLINE      // attributes (optional)
+)
+```
+
+#### Text with Selection
+
+```typescript
+buffer.drawText(
+  "Selectable text",
+  0, 0,
+  RGBA.fromHex("#FFFFFF"),
+  RGBA.fromHex("#000000"),
+  0,
+  {
+    start: 5,                       // Selection start index
+    end: 10,                        // Selection end index
+    bgColor: RGBA.fromHex("#0000FF"), // Selection background
+    fgColor: RGBA.fromHex("#FFFFFF"), // Selection foreground
+  }
+)
+```
+
+### Fill Rectangle
+
+```typescript
+buffer.fillRect(
+  10,                          // x position
+  5,                           // y position
+  20,                          // width
+  10,                          // height
+  RGBA.fromHex("#FF0000")      // background color
+)
+```
+
+### Draw Box
+
+Draw boxes with borders and titles:
+
+```typescript
+import { RGBA } from "@opentui/core"
+
+buffer.drawBox({
+  x: 5,
+  y: 3,
+  width: 40,
+  height: 15,
+  borderStyle: "rounded",        // "single" | "double" | "rounded" | "heavy" | "dashed"
+  border: true,                   // or ["top", "right", "bottom", "left"]
+  borderColor: RGBA.fromHex("#00FFFF"),
+  backgroundColor: RGBA.fromHex("#1a1a1a"),
+  shouldFill: true,               // Fill background
+  title: "My Box",
+  titleAlignment: "center",       // "left" | "center" | "right"
+})
+```
+
+#### Custom Border Characters
+
+```typescript
+const customBorder = new Uint32Array([
+  0x256D, 0x2500, 0x256E,  // top-left, horizontal, top-right
+  0x2502, 0x2502,          // vertical-left, vertical-right
+  0x2570, 0x2500, 0x256F,  // bottom-left, horizontal, bottom-right
+  0x253C,                  // cross
+])
+
+buffer.drawBox({
+  x: 0,
+  y: 0,
+  width: 20,
+  height: 10,
+  customBorderChars: customBorder,
+  border: true,
+  borderColor: RGBA.fromHex("#FFFFFF"),
+  backgroundColor: RGBA.fromHex("#000000"),
+})
+```
+
+### Clear Buffer
+
+```typescript
+// Clear with black background
+buffer.clear(RGBA.fromHex("#000000"))
+
+// Clear with transparent background
+buffer.clear(RGBA.fromValues(0, 0, 0, 0))
+```
+
+## Compositing
+
+### Draw Another FrameBuffer
+
+Composite one buffer onto another:
+
+```typescript
+const source = OptimizedBuffer.create(20, 10, "unicode")
+source.drawText("Hello", 0, 0, RGBA.fromHex("#FFFFFF"))
+
+const dest = OptimizedBuffer.create(80, 24, "unicode")
+
+// Draw entire source buffer at position (10, 5)
+dest.drawFrameBuffer(10, 5, source)
+
+// Draw a region of the source buffer
+dest.drawFrameBuffer(
+  10, 5,     // destination position
+  source,    // source buffer
+  2, 2,      // source x, y
+  15, 8      // source width, height
+)
+```
+
+### Draw TextBufferView
+
+Render a text buffer (from the editor):
+
+```typescript
+import { TextBufferView } from "@opentui/core"
+
+const view: TextBufferView = /* ... */
+buffer.drawTextBuffer(view, 0, 0)
+```
+
+### Draw EditorView
+
+```typescript
+import { EditorView } from "@opentui/core"
+
+const editorView: EditorView = /* ... */
+buffer.drawEditorView(editorView, 0, 0)
+```
+
+## Advanced Features
+
+### Scissor Rectangles
+
+Clip drawing to a region:
+
+```typescript
+// Push a clipping region
+buffer.pushScissorRect(10, 5, 30, 15)
+
+// All drawing operations are now clipped to this rectangle
+buffer.drawText("Clipped text", 0, 0, RGBA.fromHex("#FFFFFF"))
+
+// Pop the clipping region
+buffer.popScissorRect()
+
+// Drawing is no longer clipped
+buffer.drawText("Not clipped", 0, 0, RGBA.fromHex("#FFFFFF"))
+
+// Clear all scissor rectangles
+buffer.clearScissorRects()
+```
+
+Scissor rects stack - you can push multiple regions:
+
+```typescript
+buffer.pushScissorRect(0, 0, 80, 24)    // Outer bounds
+buffer.pushScissorRect(10, 10, 60, 14)  // Inner bounds (intersection)
+// Drawing is clipped to the intersection
+buffer.popScissorRect()  // Back to outer bounds
+buffer.popScissorRect()  // No clipping
+```
+
+### Opacity Stack
+
+Apply opacity to drawing operations:
+
+```typescript
+// Push opacity (0.0 - 1.0)
+buffer.pushOpacity(0.5)  // 50% transparent
+
+// All drawing operations are now semi-transparent
+buffer.drawText("Faded text", 0, 0, RGBA.fromHex("#FFFFFF"))
+
+// Pop opacity
+buffer.popOpacity()
+
+// Get current opacity
+const currentOpacity = buffer.getCurrentOpacity()
+
+// Clear all opacity
+buffer.clearOpacity()
+```
+
+Opacity also stacks:
+
+```typescript
+buffer.pushOpacity(0.5)  // 50%
+buffer.pushOpacity(0.8)  // Effective: 0.5 * 0.8 = 40%
+buffer.popOpacity()      // Back to 50%
+buffer.popOpacity()      // Back to 100%
+```
+
+### Grayscale Rendering
+
+Draw grayscale intensity data:
+
+```typescript
+const intensities = new Float32Array(100 * 50)  // 100x50 pixels
+for (let i = 0; i < intensities.length; i++) {
+  intensities[i] = Math.random()  // Random intensities 0.0-1.0
+}
+
+buffer.drawGrayscaleBuffer(
+  0, 0,                          // position
+  intensities,
+  100, 50,                       // source width, height
+  RGBA.fromHex("#FFFFFF"),       // foreground (bright areas)
+  RGBA.fromHex("#000000")        // background (dark areas)
+)
+```
+
+#### Supersampled Grayscale
+
+For higher quality:
+
+```typescript
+buffer.drawGrayscaleBufferSupersampled(
+  0, 0,
+  intensities,
+  100, 50,
+  RGBA.fromHex("#FFFFFF"),
+  RGBA.fromHex("#000000")
+)
+```
+
+### Grid Drawing
+
+Draw table grids efficiently:
+
+```typescript
+import { BorderCharArrays } from "@opentui/core"
+
+const columnOffsets = new Int32Array([0, 20, 40, 60, 80])
+const rowOffsets = new Int32Array([0, 5, 10, 15, 20])
+
+buffer.drawGrid({
+  borderChars: BorderCharArrays.single,
+  borderFg: RGBA.fromHex("#888888"),
+  borderBg: RGBA.fromHex("#000000"),
+  columnOffsets,
+  rowOffsets,
+  drawInner: true,   // Draw inner grid lines
+  drawOuter: true,   // Draw outer border
+})
+```
+
+## Buffer Inspection
+
+### Access Raw Data
+
+```typescript
+const { char, fg, bg, attributes } = buffer.buffers
+
+// char: Uint32Array - Unicode code points
+// fg: Float32Array - Foreground colors (RGBA, 4 values per cell)
+// bg: Float32Array - Background colors (RGBA, 4 values per cell)
+// attributes: Uint32Array - Text attributes (bold, italic, etc.)
+
+// Access cell at (x, y)
+const index = y * buffer.width + x
+const codePoint = char[index]
+const fgRed = fg[index * 4]
+const fgGreen = fg[index * 4 + 1]
+const fgBlue = fg[index * 4 + 2]
+const fgAlpha = fg[index * 4 + 3]
+```
+
+### Get Resolved Characters
+
+```typescript
+// Get buffer content as UTF-8 bytes
+const bytes = buffer.getRealCharBytes(false)  // false = no line breaks
+const text = new TextDecoder().decode(bytes)
+console.log(text)
+
+// With line breaks
+const bytesWithBreaks = buffer.getRealCharBytes(true)
+const lines = new TextDecoder().decode(bytesWithBreaks).split("\n")
+```
+
+### Capture as Spans
+
+Get buffer content as styled spans (useful for copying/testing):
+
+```typescript
+const lines = buffer.getSpanLines()
+
+for (const line of lines) {
+  for (const span of line.spans) {
+    console.log({
+      text: span.text,
+      fg: span.fg.toHex(),
+      bg: span.bg.toHex(),
+      attributes: span.attributes,
+      width: span.width,
+    })
+  }
+}
+```
+
+## Resizing
+
+```typescript
+buffer.resize(100, 30)  // Resize to 100x30
+
+// Check new dimensions
+console.log(buffer.width, buffer.height)
+```
+
+Resizing clears the buffer and reallocates memory.
+
+## Memory Management
+
+### Cleanup
+
+Always destroy buffers when done:
+
+```typescript
+buffer.destroy()
+```
+
+<Warning>
+Using a destroyed buffer will throw an error. Always check `buffer._destroyed` if you're unsure.
+</Warning>
+
+### Alpha Blending
+
+Toggle alpha blending dynamically:
+
+```typescript
+buffer.setRespectAlpha(true)   // Enable alpha blending
+buffer.setRespectAlpha(false)  // Disable alpha blending
+```
+
+## Unicode Encoding
+
+Encode text with width information:
+
+```typescript
+const encoded = buffer.encodeUnicode("Hello 👋 World")
+
+if (encoded) {
+  console.log(encoded.data)  // Array of { char: number, width: number }
+
+  // Free when done
+  buffer.freeUnicode(encoded)
+}
+```
+
+## Practical Examples
+
+### Custom Progress Bar
+
+```typescript
+import { RGBA, OptimizedBuffer } from "@opentui/core"
+
+function drawProgressBar(
+  buffer: OptimizedBuffer,
+  x: number,
+  y: number,
+  width: number,
+  progress: number  // 0.0 - 1.0
+) {
+  const filledWidth = Math.floor(width * progress)
+  const emptyWidth = width - filledWidth
+
+  const filledColor = RGBA.fromHex("#00FF00")
+  const emptyColor = RGBA.fromHex("#333333")
+
+  // Draw filled portion
+  for (let i = 0; i < filledWidth; i++) {
+    buffer.setCell(x + i, y, "█", filledColor, filledColor, 0)
+  }
+
+  // Draw empty portion
+  for (let i = 0; i < emptyWidth; i++) {
+    buffer.setCell(x + filledWidth + i, y, "░", emptyColor, emptyColor, 0)
+  }
+}
+
+// Use it
+const buffer = renderer.nextRenderBuffer
+drawProgressBar(buffer, 10, 5, 50, 0.65)  // 65% complete
+```
+
+### Gradient Background
+
+```typescript
+function drawGradient(
+  buffer: OptimizedBuffer,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+) {
+  for (let row = 0; row < height; row++) {
+    const ratio = row / height
+    const red = ratio
+    const blue = 1 - ratio
+
+    const color = RGBA.fromValues(red, 0, blue, 1)
+
+    for (let col = 0; col < width; col++) {
+      buffer.setCell(x + col, y + row, " ", color, color, 0)
+    }
+  }
+}
+```
+
+### Custom Renderable with FrameBuffer
+
+```typescript
+import { Renderable, OptimizedBuffer, RGBA } from "@opentui/core"
+
+class WaveRenderable extends Renderable {
+  private phase = 0
+
+  protected onUpdate(deltaTime: number): void {
+    this.phase += deltaTime * 0.001  // Animate over time
+  }
+
+  protected renderSelf(buffer: OptimizedBuffer, deltaTime: number): void {
+    const amplitude = this.height / 2
+    const frequency = 0.2
+
+    for (let x = 0; x < this.width; x++) {
+      const y = Math.floor(
+        amplitude + amplitude * Math.sin(x * frequency + this.phase)
+      )
+
+      if (y >= 0 && y < this.height) {
+        buffer.setCell(
+          this.x + x,
+          this.y + y,
+          "█",
+          RGBA.fromHex("#00FFFF"),
+          RGBA.fromHex("#000000"),
+          0
+        )
+      }
+    }
+  }
+}
+```
+
+## API Reference
+
+### Properties
+
+```typescript
+buffer.width: number              // Buffer width in cells
+buffer.height: number             // Buffer height in cells
+buffer.widthMethod: WidthMethod   // "unicode" | "wcwidth"
+buffer.respectAlpha: boolean      // Alpha blending enabled
+buffer.id: string                 // Debug identifier
+```
+
+### Core Methods
+
+```typescript
+// Drawing
+setCell(x, y, char, fg, bg, attributes?): void
+setCellWithAlphaBlending(x, y, char, fg, bg, attributes?): void
+drawText(text, x, y, fg, bg?, attributes?, selection?): void
+drawChar(char, x, y, fg, bg, attributes?): void
+fillRect(x, y, width, height, bg): void
+drawBox(options): void
+clear(bg): void
+
+// Compositing
+drawFrameBuffer(destX, destY, source, srcX?, srcY?, srcW?, srcH?): void
+
+// Clipping & opacity
+pushScissorRect(x, y, width, height): void
+popScissorRect(): void
+clearScissorRects(): void
+pushOpacity(opacity): void
+popOpacity(): void
+getCurrentOpacity(): number
+clearOpacity(): void
+
+// Inspection
+getRealCharBytes(addLineBreaks): Uint8Array
+getSpanLines(): CapturedLine[]
+
+// Management
+resize(width, height): void
+destroy(): void
+setRespectAlpha(respectAlpha): void
+```

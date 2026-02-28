@@ -1,0 +1,568 @@
+---
+title: Testing TUI Applications
+description: Test your OpenTUI applications with the built-in test renderer and utilities
+---
+
+OpenTUI provides a comprehensive testing framework built on Bun's test runner. The test renderer allows you to write unit and integration tests for your terminal UI without needing an actual terminal.
+
+## Test Renderer
+
+The test renderer creates a virtual terminal environment for testing:
+
+```typescript
+import { test, expect } from 'bun:test'
+import { createTestRenderer } from '@opentui/core/testing'
+
+test('renders text', async () => {
+  const { renderer, renderOnce, captureCharFrame } = await createTestRenderer({
+    width: 80,
+    height: 24,
+  })
+
+  const text = new TextRenderable(renderer, {
+    content: 'Hello, World!',
+  })
+  renderer.root.add(text)
+
+  await renderOnce()
+  const output = captureCharFrame()
+
+  expect(output).toContain('Hello, World!')
+})
+```
+
+### Test Renderer Options
+
+```typescript
+interface TestRendererOptions {
+  width?: number // Terminal width (default: 80)
+  height?: number // Terminal height (default: 24)
+  kittyKeyboard?: boolean // Enable Kitty keyboard protocol
+  otherModifiersMode?: boolean // Enable modifyOtherKeys mode
+  // ... other CliRendererConfig options
+}
+```
+
+### Returned Utilities
+
+```typescript
+const {
+  renderer,        // The test renderer instance
+  mockInput,       // Mock keyboard input
+  mockMouse,       // Mock mouse input
+  renderOnce,      // Render a single frame
+  captureCharFrame, // Capture current frame as string
+  captureSpans,    // Capture frame with styling info
+  resize,          // Resize the terminal
+} = await createTestRenderer({ width: 80, height: 24 })
+```
+
+## Capturing Output
+
+### Character Frame
+
+Capture the rendered output as a plain string:
+
+```typescript
+await renderOnce()
+const output = captureCharFrame()
+
+expect(output).toContain('Expected text')
+expect(output.split('\n')).toHaveLength(24) // 24 rows
+```
+
+### Spans with Styling
+
+Capture detailed styling information:
+
+```typescript
+const frame = captureSpans()
+
+console.log(frame.cols) // Terminal width
+console.log(frame.rows) // Terminal height
+console.log(frame.cursor) // [x, y] cursor position
+console.log(frame.lines) // Array of styled span lines
+```
+
+## Mock Keyboard Input
+
+Simulate keyboard input in your tests:
+
+```typescript
+import { createMockKeys, KeyCodes } from '@opentui/core/testing'
+
+test('handles keyboard input', async () => {
+  const { renderer, mockInput, renderOnce, captureCharFrame } =
+    await createTestRenderer({ width: 80, height: 24 })
+
+  const input = new InputRenderable(renderer)
+  renderer.root.add(input)
+
+  // Type text
+  await mockInput.typeText('Hello')
+  await renderOnce()
+
+  expect(captureCharFrame()).toContain('Hello')
+})
+```
+
+### Typing Text
+
+```typescript
+// Type text immediately
+mockInput.typeText('hello world')
+
+// Type with delay between keys
+await mockInput.typeText('hello', 10) // 10ms between keys
+```
+
+### Pressing Keys
+
+```typescript
+// Press single character
+mockInput.pressKey('a')
+
+// Press special keys
+mockInput.pressKey(KeyCodes.ENTER)
+mockInput.pressKey(KeyCodes.ESCAPE)
+mockInput.pressKey(KeyCodes.BACKSPACE)
+mockInput.pressKey(KeyCodes.TAB)
+
+// Press with modifiers
+mockInput.pressKey('a', { ctrl: true })
+mockInput.pressKey('f', { meta: true })
+mockInput.pressKey('z', { ctrl: true, shift: true })
+mockInput.pressKey(KeyCodes.ARROW_LEFT, { meta: true })
+```
+
+### Available Key Codes
+
+```typescript
+KeyCodes.RETURN
+KeyCodes.LINEFEED
+KeyCodes.TAB
+KeyCodes.BACKSPACE
+KeyCodes.DELETE
+KeyCodes.HOME
+KeyCodes.END
+KeyCodes.ESCAPE
+
+KeyCodes.ARROW_UP
+KeyCodes.ARROW_DOWN
+KeyCodes.ARROW_LEFT
+KeyCodes.ARROW_RIGHT
+
+KeyCodes.F1 through KeyCodes.F12
+```
+
+### Convenience Methods
+
+```typescript
+// Press common keys
+mockInput.pressEnter()
+mockInput.pressEnter({ meta: true })
+mockInput.pressEscape()
+mockInput.pressTab()
+mockInput.pressBackspace()
+mockInput.pressCtrlC()
+
+// Press arrow keys
+mockInput.pressArrow('up')
+mockInput.pressArrow('down')
+mockInput.pressArrow('left')
+mockInput.pressArrow('right')
+mockInput.pressArrow('left', { meta: true })
+
+// Paste bracketed text
+mockInput.pasteBracketedText('pasted content')
+
+// Press multiple keys
+mockInput.pressKeys(['h', 'e', 'l', 'l', 'o'])
+await mockInput.pressKeys(['a', 'b'], 10) // with delay
+```
+
+## Mock Mouse Input
+
+Simulate mouse interactions:
+
+```typescript
+import { createMockMouse, MouseButtons } from '@opentui/core/testing'
+
+test('handles mouse clicks', async () => {
+  const { renderer, mockMouse, renderOnce } =
+    await createTestRenderer({ width: 80, height: 24 })
+
+  let clicked = false
+  const button = new Button(renderer, {
+    text: 'Click me',
+    onClick: () => { clicked = true },
+  })
+  renderer.root.add(button)
+
+  await renderOnce()
+  await mockMouse.click(10, 5)
+
+  expect(clicked).toBe(true)
+})
+```
+
+### Mouse Operations
+
+```typescript
+// Click
+await mockMouse.click(x, y)
+await mockMouse.click(x, y, MouseButtons.RIGHT)
+await mockMouse.click(x, y, MouseButtons.LEFT, {
+  modifiers: { ctrl: true, shift: true },
+  delayMs: 10,
+})
+
+// Double click
+await mockMouse.doubleClick(x, y)
+
+// Press and release
+await mockMouse.pressDown(x, y, MouseButtons.MIDDLE)
+await mockMouse.release(x, y, MouseButtons.MIDDLE)
+
+// Move cursor
+await mockMouse.moveTo(x, y)
+await mockMouse.moveTo(x, y, { modifiers: { shift: true } })
+
+// Drag
+await mockMouse.drag(startX, startY, endX, endY)
+await mockMouse.drag(startX, startY, endX, endY, MouseButtons.RIGHT, {
+  modifiers: { alt: true },
+})
+
+// Scroll
+await mockMouse.scroll(x, y, 'up')
+await mockMouse.scroll(x, y, 'down')
+await mockMouse.scroll(x, y, 'left')
+await mockMouse.scroll(x, y, 'right')
+await mockMouse.scroll(x, y, 'up', { modifiers: { shift: true } })
+```
+
+### Mouse State
+
+```typescript
+// Get current position
+const pos = mockMouse.getCurrentPosition() // { x, y }
+
+// Get pressed buttons
+const buttons = mockMouse.getPressedButtons() // MouseButton[]
+```
+
+### Mouse Buttons
+
+```typescript
+MouseButtons.LEFT    // 0
+MouseButtons.MIDDLE  // 1
+MouseButtons.RIGHT   // 2
+
+MouseButtons.WHEEL_UP    // 64
+MouseButtons.WHEEL_DOWN  // 65
+MouseButtons.WHEEL_LEFT  // 66
+MouseButtons.WHEEL_RIGHT // 67
+```
+
+## Test Recorder
+
+Record frames during rendering for analysis:
+
+```typescript
+import { TestRecorder } from '@opentui/core/testing'
+
+test('records frames', async () => {
+  const { renderer, renderOnce } = await createTestRenderer({
+    width: 80,
+    height: 24,
+  })
+
+  const recorder = new TestRecorder(renderer)
+
+  // Start recording
+  recorder.rec()
+
+  const text = new TextRenderable(renderer, { content: 'Frame 1' })
+  renderer.root.add(text)
+  await Bun.sleep(1)
+
+  text.content = 'Frame 2'
+  await Bun.sleep(1)
+
+  // Stop recording
+  recorder.stop()
+
+  const frames = recorder.recordedFrames
+  expect(frames.length).toBeGreaterThan(0)
+
+  frames.forEach((frame) => {
+    console.log(`Frame ${frame.frameNumber} at ${frame.timestamp}ms:`)
+    console.log(frame.frame)
+  })
+})
+```
+
+### Recorder API
+
+```typescript
+const recorder = new TestRecorder(renderer, {
+  recordBuffers: {
+    fg: true,      // Record foreground colors
+    bg: true,      // Record background colors
+    attributes: true, // Record text attributes
+  },
+  now: () => performance.now(), // Custom time function
+})
+
+// Start recording
+recorder.rec()
+
+// Stop recording
+recorder.stop()
+
+// Check if recording
+if (recorder.isRecording) {
+  // ...
+}
+
+// Get recorded frames
+const frames = recorder.recordedFrames
+
+// Clear frames
+recorder.clear()
+```
+
+### Recorded Frame Format
+
+```typescript
+interface RecordedFrame {
+  frame: string           // Frame content
+  timestamp: number       // Time since recording started (ms)
+  frameNumber: number     // Sequential frame number
+  buffers?: {            // Optional buffer data
+    fg?: Float32Array    // Foreground colors
+    bg?: Float32Array    // Background colors
+    attributes?: Uint8Array // Text attributes
+  }
+}
+```
+
+## Spy Utility
+
+Track function calls in tests:
+
+```typescript
+import { createSpy } from '@opentui/core/testing'
+
+test('callback is called', async () => {
+  const spy = createSpy()
+
+  someFunction(spy)
+
+  expect(spy.callCount()).toBe(1)
+  expect(spy.calledWith('arg1', 'arg2')).toBe(true)
+  expect(spy.calls).toEqual([['arg1', 'arg2']])
+
+  spy.reset()
+  expect(spy.callCount()).toBe(0)
+})
+```
+
+## Running Tests
+
+### Run All Tests
+
+```bash
+cd packages/core
+bun test
+```
+
+### Run Specific Test File
+
+```bash
+bun test src/testing/integration.test.ts
+```
+
+### Run with Filter
+
+```bash
+bun test --test-name-pattern="keyboard"
+```
+
+### Watch Mode
+
+```bash
+bun test --watch
+```
+
+## Native Tests
+
+Test the Zig core directly:
+
+```bash
+cd packages/core
+bun run test:native
+```
+
+### Filter Native Tests
+
+```bash
+bun run test:native -Dtest-filter="text buffer"
+```
+
+## Testing Best Practices
+
+### 1. Use Descriptive Test Names
+
+```typescript
+test('text input accepts typed characters', async () => {
+  // ...
+})
+
+test('button triggers onClick when clicked', async () => {
+  // ...
+})
+```
+
+### 2. Test User Interactions
+
+```typescript
+test('form submits on Enter key', async () => {
+  const { renderer, mockInput } = await createTestRenderer()
+  const submitted = createSpy()
+
+  const form = new Form(renderer, { onSubmit: submitted })
+  renderer.root.add(form)
+
+  await renderOnce()
+  mockInput.pressEnter()
+
+  expect(submitted.callCount()).toBe(1)
+})
+```
+
+### 3. Test Edge Cases
+
+```typescript
+test('handles empty input', async () => {
+  // Test with no input
+})
+
+test('handles very long input', async () => {
+  // Test with maximum length input
+})
+
+test('handles resize during render', async () => {
+  const { renderer, resize, renderOnce } = await createTestRenderer()
+
+  await renderOnce()
+  resize(100, 30)
+  await renderOnce()
+
+  // Verify layout adapted
+})
+```
+
+### 4. Use Setup and Teardown
+
+```typescript
+import { test, expect, beforeEach, afterEach } from 'bun:test'
+
+let renderer: TestRenderer
+let cleanup: () => void
+
+beforeEach(async () => {
+  const result = await createTestRenderer({ width: 80, height: 24 })
+  renderer = result.renderer
+  cleanup = () => renderer.destroy()
+})
+
+afterEach(() => {
+  cleanup()
+})
+
+test('test 1', async () => {
+  // Use renderer
+})
+
+test('test 2', async () => {
+  // Use renderer
+})
+```
+
+### 5. Test Async Operations
+
+```typescript
+test('loads data asynchronously', async () => {
+  const { renderer, renderOnce, captureCharFrame } = await createTestRenderer()
+
+  const component = new AsyncComponent(renderer)
+  renderer.root.add(component)
+
+  await renderOnce()
+  expect(captureCharFrame()).toContain('Loading...')
+
+  await component.loadComplete
+  await renderOnce()
+  expect(captureCharFrame()).toContain('Data loaded')
+})
+```
+
+## Example: Complete Integration Test
+
+```typescript
+import { test, expect } from 'bun:test'
+import {
+  createTestRenderer,
+  createSpy,
+  KeyCodes,
+  MouseButtons,
+} from '@opentui/core/testing'
+
+test('todo list integration', async () => {
+  const { renderer, mockInput, mockMouse, renderOnce, captureCharFrame } =
+    await createTestRenderer({ width: 80, height: 24 })
+
+  const onAddItem = createSpy()
+  const todoList = new TodoList(renderer, { onAddItem })
+  renderer.root.add(todoList)
+
+  // Render initial state
+  await renderOnce()
+  expect(captureCharFrame()).toContain('Todo List')
+  expect(todoList.items).toHaveLength(0)
+
+  // Type new item
+  await mockInput.typeText('Buy groceries')
+  await renderOnce()
+  expect(captureCharFrame()).toContain('Buy groceries')
+
+  // Submit item
+  mockInput.pressEnter()
+  await renderOnce()
+  expect(onAddItem.callCount()).toBe(1)
+  expect(todoList.items).toHaveLength(1)
+
+  // Click item to toggle
+  await mockMouse.click(5, 5)
+  await renderOnce()
+  expect(todoList.items[0].completed).toBe(true)
+
+  // Delete with keyboard
+  mockInput.pressKey('d', { ctrl: true })
+  await renderOnce()
+  expect(todoList.items).toHaveLength(0)
+})
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Performance" href="/advanced/performance" icon="gauge">
+    Optimize your application performance
+  </Card>
+  <Card title="Environment Variables" href="/advanced/environment-variables" icon="gear">
+    Configure with environment variables
+  </Card>
+</CardGroup>

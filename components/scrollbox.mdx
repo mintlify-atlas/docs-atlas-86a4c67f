@@ -1,0 +1,515 @@
+---
+title: 'ScrollBox'
+description: 'A scrollable container with automatic scrollbars and sticky scroll support'
+---
+
+## Overview
+
+The `ScrollBoxRenderable` extends `BoxRenderable` to provide scrollable content areas with automatic scrollbar management, viewport culling, and advanced features like sticky scrolling and scroll acceleration.
+
+## Basic Usage
+
+```typescript
+import { ScrollBoxRenderable } from '@opentui/core'
+
+const scrollBox = new ScrollBoxRenderable(renderer, {
+  id: 'scroll-container',
+  scrollY: true,
+  scrollX: false,
+  rootOptions: {
+    backgroundColor: '#1e293b',
+    border: true,
+  },
+})
+
+// Add content
+for (let i = 0; i < 100; i++) {
+  const item = new BoxRenderable(renderer, {
+    id: `item-${i}`,
+    height: 3,
+    backgroundColor: i % 2 === 0 ? '#334155' : '#475569',
+  })
+  scrollBox.add(item)
+}
+
+renderer.root.add(scrollBox)
+scrollBox.focus() // Enable keyboard scrolling
+```
+
+## Props
+
+### Scroll Configuration
+
+<ParamField path="scrollY" type="boolean" default="true">
+  Enable vertical scrolling.
+</ParamField>
+
+<ParamField path="scrollX" type="boolean" default="false">
+  Enable horizontal scrolling.
+</ParamField>
+
+<ParamField path="stickyScroll" type="boolean" default="false">
+  Enable sticky scroll behavior that automatically sticks to edges when new content is added.
+</ParamField>
+
+<ParamField path="stickyStart" type="'top' | 'bottom' | 'left' | 'right'">
+  Initial sticky position. Requires `stickyScroll: true`.
+</ParamField>
+
+<ParamField path="scrollAcceleration" type="ScrollAcceleration">
+  Custom scroll acceleration implementation. Defaults to `LinearScrollAccel()`. Also available: `MacOSScrollAccel()`.
+</ParamField>
+
+<ParamField path="viewportCulling" type="boolean" default="true">
+  Enable viewport culling to only render visible children, improving performance for large lists.
+</ParamField>
+
+### Container Options
+
+ScrollBox is composed of multiple nested containers. You can customize each layer:
+
+<ParamField path="rootOptions" type="BoxOptions">
+  Options for the root container (outermost box). Inherits all [Box props](/components/box).
+</ParamField>
+
+<ParamField path="wrapperOptions" type="BoxOptions">
+  Options for the wrapper container. Inherits all [Box props](/components/box).
+</ParamField>
+
+<ParamField path="viewportOptions" type="BoxOptions">
+  Options for the viewport container (visible area). Inherits all [Box props](/components/box).
+</ParamField>
+
+<ParamField path="contentOptions" type="BoxOptions">
+  Options for the content container (holds children). Inherits all [Box props](/components/box).
+</ParamField>
+
+### Scrollbar Configuration
+
+<ParamField path="scrollbarOptions" type="Omit<ScrollBarOptions, 'orientation'>">
+  Options applied to both vertical and horizontal scrollbars.
+  
+  Available properties:
+  - `width`: Width of the scrollbar (default: 1)
+  - `showArrows`: Show arrow buttons (default: false)
+  - `trackOptions`: Styling for the track
+  - `arrowOptions`: Styling for arrow buttons
+</ParamField>
+
+<ParamField path="verticalScrollbarOptions" type="Omit<ScrollBarOptions, 'orientation'>">
+  Options specific to the vertical scrollbar. Overrides `scrollbarOptions`.
+</ParamField>
+
+<ParamField path="horizontalScrollbarOptions" type="Omit<ScrollBarOptions, 'orientation'>">
+  Options specific to the horizontal scrollbar. Overrides `scrollbarOptions`.
+</ParamField>
+
+### Padding
+
+<Note>
+  Padding props are forwarded to the content container, not the root.
+</Note>
+
+<ParamField path="padding" type="number | `${number}%`">
+  Padding on all sides of the content.
+</ParamField>
+
+<ParamField path="paddingX" type="number | `${number}%`">
+  Horizontal padding (left and right).
+</ParamField>
+
+<ParamField path="paddingY" type="number | `${number}%`">
+  Vertical padding (top and bottom).
+</ParamField>
+
+<ParamField path="paddingTop" type="number | `${number}%`">
+  Padding on the top side.
+</ParamField>
+
+<ParamField path="paddingRight" type="number | `${number}%`">
+  Padding on the right side.
+</ParamField>
+
+<ParamField path="paddingBottom" type="number | `${number}%`">
+  Padding on the bottom side.
+</ParamField>
+
+<ParamField path="paddingLeft" type="number | `${number}%`">
+  Padding on the left side.
+</ParamField>
+
+## Properties
+
+### scrollTop
+
+```typescript
+scrollBox.scrollTop = 100  // Set scroll position
+console.log(scrollBox.scrollTop)  // Get current position
+```
+
+### scrollLeft
+
+```typescript
+scrollBox.scrollLeft = 50
+console.log(scrollBox.scrollLeft)
+```
+
+### scrollHeight
+
+Read-only. Total scrollable height.
+
+```typescript
+console.log(scrollBox.scrollHeight)
+```
+
+### scrollWidth
+
+Read-only. Total scrollable width.
+
+```typescript
+console.log(scrollBox.scrollWidth)
+```
+
+## Methods
+
+### scrollBy(delta, unit?)
+
+Scroll by a specified amount.
+
+```typescript
+// Scroll down by 10 pixels
+scrollBox.scrollBy(10)
+
+// Scroll in both directions
+scrollBox.scrollBy({ x: 5, y: 10 })
+
+// Scroll by percentage
+scrollBox.scrollBy(0.5, 'percentage')  // 50% of viewport
+
+// Scroll by page
+scrollBox.scrollBy(1, 'page')  // One full page
+```
+
+**Parameters:**
+- `delta`: `number | { x: number, y: number }` - Amount to scroll
+- `unit`: `'absolute' | 'percentage' | 'page'` (default: 'absolute')
+
+### scrollTo(position)
+
+Scroll to a specific position.
+
+```typescript
+// Scroll to position 100
+scrollBox.scrollTo(100)
+
+// Scroll to specific x, y coordinates
+scrollBox.scrollTo({ x: 50, y: 100 })
+
+// Scroll to top
+scrollBox.scrollTo(0)
+
+// Scroll to bottom
+scrollBox.scrollTo(scrollBox.scrollHeight - scrollBox.viewport.height)
+```
+
+### add(child, index?)
+
+Add a child element to the scroll content.
+
+```typescript
+const item = new BoxRenderable(renderer, { id: 'item' })
+scrollBox.add(item)
+
+// Add at specific index
+scrollBox.add(item, 0)  // Add at top
+```
+
+### remove(id)
+
+Remove a child element by ID.
+
+```typescript
+scrollBox.remove('item-1')
+```
+
+### focus()
+
+Focus the scrollbox to enable keyboard scrolling.
+
+```typescript
+scrollBox.focus()
+```
+
+## Examples
+
+### Basic Vertical Scrolling
+
+```typescript
+const scrollBox = new ScrollBoxRenderable(renderer, {
+  id: 'basic-scroll',
+  scrollY: true,
+  rootOptions: {
+    backgroundColor: '#1e293b',
+    border: true,
+    borderStyle: 'single',
+  },
+  padding: 2,
+})
+
+// Add many items
+for (let i = 0; i < 100; i++) {
+  const item = new TextRenderable(renderer, {
+    content: `Item ${i + 1}`,
+  })
+  scrollBox.add(item)
+}
+
+renderer.root.add(scrollBox)
+scrollBox.focus()
+```
+
+### Styled Scrollbars
+
+```typescript
+const scrollBox = new ScrollBoxRenderable(renderer, {
+  id: 'styled-scroll',
+  scrollY: true,
+  scrollbarOptions: {
+    showArrows: true,
+    trackOptions: {
+      foregroundColor: '#3b82f6',
+      backgroundColor: '#1e293b',
+    },
+  },
+  rootOptions: {
+    border: true,
+    backgroundColor: '#0f172a',
+  },
+})
+```
+
+### Sticky Scroll (Chat/Log View)
+
+```typescript
+const chatBox = new ScrollBoxRenderable(renderer, {
+  id: 'chat',
+  stickyScroll: true,
+  stickyStart: 'bottom',
+  scrollY: true,
+  rootOptions: {
+    backgroundColor: '#1e293b',
+    border: true,
+    title: 'Chat',
+    titleAlignment: 'center',
+  },
+  padding: 1,
+})
+
+// Add messages dynamically
+function addMessage(text: string) {
+  const message = new TextRenderable(renderer, {
+    content: text,
+  })
+  chatBox.add(message)
+  // Automatically scrolls to bottom due to sticky scroll
+}
+
+renderer.root.add(chatBox)
+```
+
+### Horizontal Scrolling
+
+```typescript
+const wideContent = new ScrollBoxRenderable(renderer, {
+  id: 'horizontal-scroll',
+  scrollX: true,
+  scrollY: false,
+  rootOptions: {
+    border: true,
+  },
+  contentOptions: {
+    flexDirection: 'row',
+  },
+})
+
+for (let i = 0; i < 50; i++) {
+  const item = new BoxRenderable(renderer, {
+    id: `item-${i}`,
+    width: 20,
+    height: 10,
+    backgroundColor: '#3b82f6',
+    marginRight: 2,
+  })
+  wideContent.add(item)
+}
+
+renderer.root.add(wideContent)
+```
+
+### Two-Way Scrolling
+
+```typescript
+const grid = new ScrollBoxRenderable(renderer, {
+  id: 'grid-scroll',
+  scrollX: true,
+  scrollY: true,
+  rootOptions: {
+    border: true,
+    backgroundColor: '#0f172a',
+  },
+  contentOptions: {
+    flexDirection: 'column',
+  },
+})
+
+// Create a large grid
+for (let row = 0; row < 100; row++) {
+  const rowBox = new BoxRenderable(renderer, {
+    id: `row-${row}`,
+    flexDirection: 'row',
+    height: 3,
+  })
+
+  for (let col = 0; col < 50; col++) {
+    const cell = new BoxRenderable(renderer, {
+      id: `cell-${row}-${col}`,
+      width: 15,
+      backgroundColor: (row + col) % 2 === 0 ? '#1e293b' : '#334155',
+      marginRight: 1,
+    })
+    rowBox.add(cell)
+  }
+
+  grid.add(rowBox)
+}
+
+renderer.root.add(grid)
+grid.focus()
+```
+
+### Custom Scroll Acceleration
+
+```typescript
+import { MacOSScrollAccel } from '@opentui/core'
+
+const scrollBox = new ScrollBoxRenderable(renderer, {
+  id: 'macos-scroll',
+  scrollY: true,
+  scrollAcceleration: new MacOSScrollAccel(),
+  rootOptions: {
+    border: true,
+  },
+})
+```
+
+### Toggling Scrollbar Visibility
+
+```typescript
+const scrollBox = new ScrollBoxRenderable(renderer, {
+  id: 'toggle-scroll',
+  scrollY: true,
+})
+
+// Toggle visibility
+renderer.keyInput.on('keypress', (key) => {
+  if (key.name === 'v') {
+    scrollBox.verticalScrollBar.visible = !scrollBox.verticalScrollBar.visible
+  }
+  if (key.name === 'h') {
+    scrollBox.horizontalScrollBar.visible = !scrollBox.horizontalScrollBar.visible
+  }
+})
+```
+
+### Disable Viewport Culling
+
+```typescript
+const scrollBox = new ScrollBoxRenderable(renderer, {
+  id: 'no-culling',
+  scrollY: true,
+  viewportCulling: false,  // Render all children even if not visible
+})
+```
+
+## Keyboard Controls
+
+When a ScrollBox has focus, these keys control scrolling:
+
+- **Up Arrow** / **Down Arrow**: Scroll by one line
+- **Page Up** / **Page Down**: Scroll by one page
+- **Home**: Scroll to top
+- **End**: Scroll to bottom
+- **Shift + Scroll Wheel**: Switch horizontal/vertical scroll direction
+
+## Architecture
+
+ScrollBox is composed of nested containers:
+
+```
+ScrollBox (root)
+  └─ Wrapper
+      ├─ Viewport (visible area)
+      │   └─ Content (holds children, translates for scrolling)
+      └─ HorizontalScrollBar
+  └─ VerticalScrollBar
+```
+
+- **Root**: The outermost container, configure with `rootOptions`
+- **Wrapper**: Contains viewport and horizontal scrollbar
+- **Viewport**: The visible area with clipping
+- **Content**: Holds all children, translates to create scroll effect
+- **Scrollbars**: Positioned outside the viewport
+
+## Performance
+
+### Viewport Culling
+
+By default, ScrollBox only renders children that are visible in the viewport. This dramatically improves performance for large lists:
+
+```typescript
+// With culling (default) - only renders ~20 items
+const scrollBox = new ScrollBoxRenderable(renderer, {
+  viewportCulling: true,  // default
+})
+
+// Add 10,000 items - still performs well
+for (let i = 0; i < 10000; i++) {
+  scrollBox.add(createItem(i))
+}
+```
+
+### Sticky Scroll Behavior
+
+Sticky scroll automatically keeps the view "stuck" to an edge when new content is added:
+
+- **Bottom stick**: Useful for chat/logs - stays at bottom as messages arrive
+- **Top stick**: Useful for reverse-chronological feeds
+- Automatically disables when user manually scrolls away
+- Re-enables when scrolled back to the sticky edge
+
+```typescript
+const logViewer = new ScrollBoxRenderable(renderer, {
+  stickyScroll: true,
+  stickyStart: 'bottom',
+})
+
+// These additions will keep the view scrolled to bottom
+logViewer.add(new TextRenderable(renderer, { content: 'Log 1' }))
+logViewer.add(new TextRenderable(renderer, { content: 'Log 2' }))
+
+// User scrolls up - sticky disabled
+// User scrolls back to bottom - sticky re-enabled
+```
+
+## Notes
+
+- ScrollBox inherits all props from [Box](/components/box) via `rootOptions`
+- Padding is applied to the content container, not the root
+- Scrollbars are automatically shown/hidden based on content size
+- Mouse wheel scrolling works when hovering over the ScrollBox
+- Shift + mouse wheel switches scroll direction (vertical ↔ horizontal)
+- Auto-scrolling during drag selection is supported
+
+<Note>
+  For simple non-scrollable containers, use [Box](/components/box) instead.
+</Note>

@@ -1,0 +1,485 @@
+---
+title: Styling and Colors
+description: Master RGBA colors, text attributes, and styling options in OpenTUI
+---
+
+OpenTUI provides a powerful styling system with RGBA colors, text attributes, and flexible color formats. This guide covers everything you need to create beautiful terminal UIs.
+
+## RGBA Color System
+
+OpenTUI uses the `RGBA` class for consistent color representation. Colors are stored internally as normalized float values (0.0-1.0) for efficient processing.
+
+### Creating Colors
+
+<CodeGroup>
+
+```typescript RGB Integers (0-255)
+import { RGBA } from "@opentui/core"
+
+const red = RGBA.fromInts(255, 0, 0, 255)
+const semiTransparentBlue = RGBA.fromInts(0, 0, 255, 128)
+const white = RGBA.fromInts(255, 255, 255, 255)
+```
+
+```typescript Float Values (0.0-1.0)
+import { RGBA } from "@opentui/core"
+
+const red = RGBA.fromValues(1.0, 0.0, 0.0, 1.0)
+const halfOpacity = RGBA.fromValues(1.0, 1.0, 1.0, 0.5)
+const black = RGBA.fromValues(0.0, 0.0, 0.0, 1.0)
+```
+
+```typescript Hex Strings
+import { RGBA } from "@opentui/core"
+
+const red = RGBA.fromHex("#FF0000")
+const blue = RGBA.fromHex("#0000FF")
+const green = RGBA.fromHex("#00FF00")
+const transparent = RGBA.fromHex("transparent")
+```
+
+```typescript Color Parsing
+import { parseColor } from "@opentui/core"
+
+// Accepts RGBA objects or color strings
+const color1 = parseColor("#FF6B6B")
+const color2 = parseColor("red") // CSS color names
+const color3 = parseColor("transparent")
+const color4 = parseColor(RGBA.fromInts(100, 200, 50, 255))
+```
+
+</CodeGroup>
+
+### Using Colors
+
+Colors can be applied to backgrounds, text, and borders:
+
+```typescript
+import { BoxRenderable, TextRenderable, RGBA } from "@opentui/core"
+
+const box = new BoxRenderable(renderer, {
+  id: "styled-box",
+  width: 30,
+  height: 10,
+  backgroundColor: RGBA.fromHex("#3b82f6"),
+  borderColor: RGBA.fromInts(255, 255, 255, 255),
+  borderStyle: "double",
+})
+
+const text = new TextRenderable(renderer, {
+  id: "styled-text",
+  content: "Hello, OpenTUI!",
+  fg: "#FFFFFF", // Foreground (text color)
+  bg: "#FF6B6B", // Background
+})
+```
+
+## Text Attributes
+
+Text attributes control styling like bold, underline, and italic. They use bitwise OR to combine multiple attributes.
+
+### Available Attributes
+
+```typescript
+import { TextAttributes } from "@opentui/core"
+
+TextAttributes.BOLD        // Bold text
+TextAttributes.DIM         // Dimmed/faint text
+TextAttributes.ITALIC      // Italic text
+TextAttributes.UNDERLINE   // Underlined text
+TextAttributes.BLINK       // Blinking text (rarely supported)
+TextAttributes.REVERSE     // Reverse video (swap fg/bg)
+TextAttributes.HIDDEN      // Hidden text
+TextAttributes.STRIKETHROUGH // Strikethrough text
+```
+
+### Combining Attributes
+
+Use bitwise OR (`|`) to combine multiple attributes:
+
+```typescript
+import { TextRenderable, TextAttributes } from "@opentui/core"
+
+const text = new TextRenderable(renderer, {
+  id: "styled-text",
+  content: "Important Message",
+  fg: "#FFFF00",
+  attributes: TextAttributes.BOLD | TextAttributes.UNDERLINE,
+})
+```
+
+## Styled Text with Template Literals
+
+The `t` template literal and helper functions make it easy to create rich, styled text.
+
+### Basic Styling
+
+```typescript
+import { TextRenderable, t, bold, underline, italic, fg, bg } from "@opentui/core"
+
+const styledText = t`This is ${bold("bold")}, ${underline("underlined")}, and ${italic("italic")} text.`
+
+const coloredText = t`${fg("#FF0000")("Red text")} and ${bg("#00FF00")(fg("#000000")("black on green"))}`
+
+const text = new TextRenderable(renderer, {
+  id: "rich-text",
+  content: styledText,
+})
+```
+
+### Color Helpers
+
+<CodeGroup>
+
+```typescript Named Colors
+import { t, red, green, blue, yellow } from "@opentui/core"
+
+const text = t`
+${red("ERROR:"))} Connection failed
+${green("SUCCESS:")} Data loaded
+${yellow("WARNING:")} Low memory
+${blue("INFO:")} Update available
+`
+```
+
+```typescript Custom Hex Colors
+import { t, fg, bg } from "@opentui/core"
+
+const text = t`
+${fg("#FF6B6B")("Custom red")}
+${fg("#4ECDC4")("Custom cyan")}
+${bg("#FFE66D")(fg("#000000")("Yellow background"))}
+`
+```
+
+```typescript Combined Styling
+import { t, bold, underline, fg, bg } from "@opentui/core"
+
+const header = t`${bold(fg("#00FFFF")("DASHBOARD"))}`
+const highlight = t`${bg("#FFFF00")(fg("#000000")(bold("NOTICE")))}`
+const link = t`${underline(fg("#0000FF")("https://opentui.com"))}`
+```
+
+</CodeGroup>
+
+### Dynamic Content
+
+Template literals support dynamic values and expressions:
+
+```typescript
+import { t, bold, green, red, fg } from "@opentui/core"
+
+let counter = 0
+let cpuLoad = 45.2
+let isOnline = true
+
+const statusText = t`
+${bold("System Status:")}
+Counter: ${green(counter)}
+CPU Load: ${cpuLoad > 80 ? red(`${cpuLoad}%`) : green(`${cpuLoad}%`)}
+Connection: ${isOnline ? green(bold("ONLINE")) : red(bold("OFFLINE"))}
+Random ID: ${fg("#E67E22")(Math.floor(Math.random() * 9999))}
+`
+```
+
+## Box Styling
+
+Boxes support backgrounds, borders, and various border styles.
+
+### Border Styles
+
+<Tabs>
+  <Tab title="Single">
+    ```typescript
+    const box = new BoxRenderable(renderer, {
+      borderStyle: "single",
+      border: true,
+    })
+    // ┌─────┐
+    // │     │
+    // └─────┘
+    ```
+  </Tab>
+  <Tab title="Double">
+    ```typescript
+    const box = new BoxRenderable(renderer, {
+      borderStyle: "double",
+      border: true,
+    })
+    // ╔═════╗
+    // ║     ║
+    // ╚═════╝
+    ```
+  </Tab>
+  <Tab title="Rounded">
+    ```typescript
+    const box = new BoxRenderable(renderer, {
+      borderStyle: "rounded",
+      border: true,
+    })
+    // ╭─────╮
+    // │     │
+    // ╰─────╯
+    ```
+  </Tab>
+  <Tab title="Bold">
+    ```typescript
+    const box = new BoxRenderable(renderer, {
+      borderStyle: "bold",
+      border: true,
+    })
+    // ┏━━━━━┓
+    // ┃     ┃
+    // ┗━━━━━┛
+    ```
+  </Tab>
+</Tabs>
+
+### Complete Box Styling
+
+```typescript
+import { BoxRenderable, TextRenderable, RGBA } from "@opentui/core"
+
+const styledBox = new BoxRenderable(renderer, {
+  id: "settings-panel",
+  width: 40,
+  height: 15,
+  backgroundColor: RGBA.fromHex("#1a1a2e"),
+  borderStyle: "double",
+  borderColor: "#00FFFF",
+  title: "Settings",
+  titleAlignment: "center",
+  border: true,
+  padding: 1,
+})
+
+const content = new TextRenderable(renderer, {
+  id: "settings-content",
+  content: "Panel content here...",
+  fg: "#FFFFFF",
+})
+
+styledBox.add(content)
+```
+
+## Transparency and Alpha Blending
+
+OpenTUI supports alpha transparency for creating layered UIs.
+
+### Creating Transparent Elements
+
+```typescript
+import { BoxRenderable, RGBA } from "@opentui/core"
+
+// Semi-transparent overlay
+const overlay = new BoxRenderable(renderer, {
+  id: "overlay",
+  position: "absolute",
+  left: 0,
+  top: 0,
+  width: "100%",
+  height: "100%",
+  backgroundColor: RGBA.fromValues(0.0, 0.0, 0.0, 0.7), // 70% opacity
+  zIndex: 100,
+})
+
+// Frosted glass effect
+const dialog = new BoxRenderable(renderer, {
+  id: "dialog",
+  width: 50,
+  height: 20,
+  backgroundColor: RGBA.fromValues(0.1, 0.1, 0.1, 0.9),
+  borderColor: RGBA.fromValues(1.0, 1.0, 1.0, 0.3),
+  borderStyle: "rounded",
+  zIndex: 101,
+})
+```
+
+### FrameBuffer with Alpha
+
+For custom rendering with transparency:
+
+```typescript
+import { FrameBufferRenderable, RGBA } from "@opentui/core"
+
+const canvas = new FrameBufferRenderable(renderer, {
+  id: "canvas",
+  width: 60,
+  height: 30,
+  respectAlpha: true, // Enable alpha blending
+})
+
+// Draw with transparency
+const transparentRed = RGBA.fromValues(1.0, 0.0, 0.0, 0.5)
+canvas.frameBuffer.fillRect(10, 5, 20, 10, transparentRed)
+```
+
+## Theme Integration
+
+React to terminal theme changes:
+
+```typescript
+import { createCliRenderer, type ThemeMode } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+// Check current theme
+const currentTheme = renderer.themeMode // "dark", "light", or null
+
+// Listen for theme changes
+renderer.on("theme_mode", (mode: ThemeMode) => {
+  console.log("Theme changed to:", mode)
+  
+  if (mode === "dark") {
+    // Apply dark theme colors
+    renderer.setBackgroundColor("#001122")
+  } else if (mode === "light") {
+    // Apply light theme colors
+    renderer.setBackgroundColor("#F5F5F5")
+  }
+})
+```
+
+## Color Palettes
+
+Create consistent color schemes:
+
+```typescript
+import { RGBA } from "@opentui/core"
+
+const palette = {
+  background: RGBA.fromHex("#001122"),
+  primary: RGBA.fromHex("#3b82f6"),
+  secondary: RGBA.fromHex("#8b5cf6"),
+  success: RGBA.fromHex("#10b981"),
+  warning: RGBA.fromHex("#f59e0b"),
+  error: RGBA.fromHex("#ef4444"),
+  text: RGBA.fromHex("#ffffff"),
+  textMuted: RGBA.fromHex("#9ca3af"),
+}
+
+// Use throughout your app
+const successBox = new BoxRenderable(renderer, {
+  backgroundColor: palette.success,
+  borderColor: palette.text,
+})
+```
+
+## Performance Tips
+
+<AccordionGroup>
+  <Accordion title="Reuse RGBA Objects">
+    Create RGBA objects once and reuse them instead of creating new ones frequently:
+    
+    ```typescript
+    // Good
+    const blue = RGBA.fromHex("#0000FF")
+    box1.backgroundColor = blue
+    box2.backgroundColor = blue
+    
+    // Avoid
+    box1.backgroundColor = RGBA.fromHex("#0000FF")
+    box2.backgroundColor = RGBA.fromHex("#0000FF")
+    ```
+  </Accordion>
+  
+  <Accordion title="Minimize Dynamic Text Updates">
+    Update styled text only when values change:
+    
+    ```typescript
+    let lastValue = 0
+    
+    renderer.setFrameCallback(async () => {
+      const newValue = Math.floor(Math.random() * 100)
+      if (newValue !== lastValue) {
+        statusText.content = t`Value: ${green(newValue)}`
+        lastValue = newValue
+      }
+    })
+    ```
+  </Accordion>
+  
+  <Accordion title="Use String Colors for Simple Cases">
+    String colors are parsed once and cached:
+    
+    ```typescript
+    // Both are fine, string is more concise
+    const box1 = new BoxRenderable(renderer, {
+      backgroundColor: "#3b82f6",
+    })
+    
+    const box2 = new BoxRenderable(renderer, {
+      backgroundColor: RGBA.fromHex("#3b82f6"),
+    })
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Examples
+
+### Status Dashboard
+
+```typescript
+import { TextRenderable, t, bold, green, red, fg, bg } from "@opentui/core"
+
+const cpuLoad = 72.5
+const memoryUsage = 85.2
+const isOnline = true
+
+const dashboard = t`
+${bold("System Stats:")}
+${fg("#FF6B6B")("CPU:"))} ${cpuLoad > 80 ? red(bold(`${cpuLoad}%`)) : green(`${cpuLoad}%`)}
+${fg("#4ECDC4")("Memory:")} ${memoryUsage > 90 ? red(bold(`${memoryUsage}%`)) : fg("#FFA500")(`${memoryUsage}%`)}
+${fg("#FFE66D")("Status:")} ${isOnline ? green(bold("ONLINE")) : red(bold("OFFLINE"))}
+${bg("#FFFF00")(fg("#000000")(bold(" NOTICE "))))} System update available
+`
+
+const statusDisplay = new TextRenderable(renderer, {
+  id: "dashboard",
+  content: dashboard,
+})
+```
+
+### Styled Panel
+
+```typescript
+import { BoxRenderable, TextRenderable, RGBA, t, bold, fg } from "@opentui/core"
+
+const panel = new BoxRenderable(renderer, {
+  id: "info-panel",
+  width: 50,
+  height: 15,
+  backgroundColor: RGBA.fromValues(0.1, 0.1, 0.2, 0.95),
+  borderStyle: "rounded",
+  borderColor: "#00FFFF",
+  title: "Information",
+  titleAlignment: "center",
+  border: true,
+  padding: 1,
+})
+
+const content = new TextRenderable(renderer, {
+  id: "panel-content",
+  content: t`
+${bold(fg("#00FFFF")("Welcome to OpenTUI"))}
+
+This is a ${fg("#FF6B6B")("styled")} panel with:
+• ${fg("#00FF00")("Custom colors")}
+• ${fg("#FFE66D")("Transparency")}
+• ${fg("#9B59B6")("Rounded borders")}
+  `,
+})
+
+panel.add(content)
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Keyboard and Mouse" icon="keyboard" href="/guides/keyboard-and-mouse">
+    Handle user input events
+  </Card>
+  <Card title="Animations" icon="wand-magic-sparkles" href="/guides/animations">
+    Animate colors and properties
+  </Card>
+</CardGroup>

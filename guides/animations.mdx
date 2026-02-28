@@ -1,0 +1,747 @@
+---
+title: Timeline Animation System
+description: Create smooth, synchronized animations with OpenTUI's powerful Timeline API
+---
+
+OpenTUI includes a comprehensive timeline animation system for creating smooth, synchronized animations. Animate any numeric property with easing functions, loops, and nested timelines.
+
+## Quick Start
+
+Create a simple animation in just a few lines:
+
+```typescript
+import { createTimeline, BoxRenderable } from "@opentui/core"
+
+const box = new BoxRenderable(renderer, {
+  id: "box",
+  position: "absolute",
+  left: 10,
+  top: 5,
+  width: 8,
+  height: 4,
+  backgroundColor: "#FF6B6B",
+})
+
+// Create and start animation
+const timeline = createTimeline({
+  duration: 2000, // 2 seconds
+})
+
+timeline.add(
+  { x: 0 },           // Object to animate
+  {
+    x: 100,           // Target value
+    duration: 2000,   // Animation duration
+    ease: "inOutQuad",// Easing function
+    onUpdate: (anim) => {
+      box.left = Math.round(anim.targets[0].x)
+    },
+  }
+)
+```
+
+## Creating Timelines
+
+### Basic Timeline
+
+```typescript
+import { createTimeline } from "@opentui/core"
+
+const timeline = createTimeline({
+  duration: 5000,      // Total timeline duration (ms)
+  loop: false,         // Loop the timeline
+  autoplay: true,      // Start immediately (default: true)
+  onComplete: () => {
+    console.log("Timeline complete!")
+  },
+  onPause: () => {
+    console.log("Timeline paused")
+  },
+})
+```
+
+### Timeline Control
+
+```typescript
+// Play/pause
+timeline.play()
+timeline.pause()
+
+// Restart from beginning
+timeline.restart()
+
+// Check state
+if (timeline.isPlaying) {
+  console.log("Timeline is running")
+}
+
+if (timeline.isComplete) {
+  console.log("Timeline finished")
+}
+```
+
+## Adding Animations
+
+### Animating Properties
+
+Animate any numeric properties on JavaScript objects:
+
+```typescript
+const box = { x: 0, y: 0, width: 10, height: 5, opacity: 1.0 }
+
+timeline.add(
+  box,
+  {
+    x: 50,              // Animate to x: 50
+    y: 30,              // Animate to y: 30
+    width: 20,          // Animate to width: 20
+    duration: 1500,     // 1.5 seconds
+    ease: "inOutQuad",
+    onUpdate: (anim) => {
+      // Apply to renderable
+      boxRenderable.left = Math.round(box.x)
+      boxRenderable.top = Math.round(box.y)
+      boxRenderable.width = Math.round(box.width)
+    },
+  },
+  0  // Start time (0 = start of timeline)
+)
+```
+
+### Multiple Targets
+
+Animate multiple objects together:
+
+```typescript
+const boxes = [
+  { x: 0 },
+  { x: 10 },
+  { x: 20 },
+]
+
+timeline.add(
+  boxes,  // Array of targets
+  {
+    x: 100,
+    duration: 2000,
+    onUpdate: (anim) => {
+      // anim.targets is the array of objects
+      boxes.forEach((box, i) => {
+        console.log(`Box ${i}: x=${box.x}`)
+      })
+    },
+  }
+)
+```
+
+## Easing Functions
+
+Control animation curves with easing functions:
+
+<Tabs>
+  <Tab title="Linear">
+    ```typescript
+    timeline.add(obj, {
+      x: 100,
+      ease: "linear",
+    })
+    // Constant speed, no acceleration
+    ```
+  </Tab>
+  
+  <Tab title="Quad">
+    ```typescript
+    timeline.add(obj, {
+      x: 100,
+      ease: "inQuad",     // Slow start, fast end
+      // ease: "outQuad",  // Fast start, slow end
+      // ease: "inOutQuad", // Slow start and end
+    })
+    ```
+  </Tab>
+  
+  <Tab title="Expo">
+    ```typescript
+    timeline.add(obj, {
+      x: 100,
+      ease: "inExpo",     // Exponential acceleration
+      // ease: "outExpo",  // Exponential deceleration
+    })
+    ```
+  </Tab>
+  
+  <Tab title="Elastic & Bounce">
+    ```typescript
+    timeline.add(obj, {
+      x: 100,
+      ease: "outElastic",  // Elastic spring effect
+      // ease: "outBounce", // Bouncing effect
+      // ease: "inBounce",  // Reverse bounce
+    })
+    ```
+  </Tab>
+  
+  <Tab title="Circular">
+    ```typescript
+    timeline.add(obj, {
+      x: 100,
+      ease: "inCirc",      // Circular acceleration
+      // ease: "outCirc",   // Circular deceleration
+      // ease: "inOutCirc", // Circular both ends
+    })
+    ```
+  </Tab>
+  
+  <Tab title="Back">
+    ```typescript
+    timeline.add(obj, {
+      x: 100,
+      ease: "inBack",      // Slight overshoot start
+      // ease: "outBack",   // Overshoot end
+      // ease: "inOutBack", // Overshoot both ends
+    })
+    ```
+  </Tab>
+</Tabs>
+
+Available easing functions:
+- `linear` - Constant speed
+- `inQuad`, `outQuad`, `inOutQuad` - Quadratic
+- `inExpo`, `outExpo` - Exponential
+- `inOutSine` - Sinusoidal
+- `outBounce`, `inBounce` - Bouncing
+- `outElastic` - Elastic spring
+- `inCirc`, `outCirc`, `inOutCirc` - Circular
+- `inBack`, `outBack`, `inOutBack` - Overshoot
+
+## Looping Animations
+
+### Basic Looping
+
+```typescript
+timeline.add(
+  obj,
+  {
+    x: 100,
+    duration: 1000,
+    loop: true,        // Loop forever
+    // loop: 5,        // Loop 5 times
+  }
+)
+```
+
+### Alternating Loops
+
+Reverse direction on each loop:
+
+```typescript
+timeline.add(
+  obj,
+  {
+    x: 100,
+    duration: 1000,
+    loop: 5,
+    alternate: true,   // Go back and forth
+    onLoop: () => {
+      console.log("Loop completed")
+    },
+  }
+)
+```
+
+### Loop Delay
+
+Add delay between loops:
+
+```typescript
+timeline.add(
+  obj,
+  {
+    x: 100,
+    duration: 1000,
+    loop: true,
+    loopDelay: 500,    // Wait 500ms between loops
+  }
+)
+```
+
+## Timeline Callbacks
+
+### Animation Callbacks
+
+```typescript
+timeline.add(
+  obj,
+  {
+    x: 100,
+    duration: 1000,
+    onStart: () => {
+      console.log("Animation started")
+    },
+    onUpdate: (anim) => {
+      console.log("Progress:", anim.progress)
+      console.log("Current time:", anim.currentTime)
+      console.log("Delta time:", anim.deltaTime)
+    },
+    onComplete: () => {
+      console.log("Animation completed")
+    },
+    onLoop: () => {
+      console.log("Loop iteration completed")
+    },
+  }
+)
+```
+
+### Timeline-wide Callbacks
+
+```typescript
+const timeline = createTimeline({
+  duration: 5000,
+  onComplete: () => {
+    console.log("Entire timeline complete")
+  },
+  onPause: () => {
+    console.log("Timeline paused")
+  },
+})
+```
+
+### Function Calls
+
+Execute functions at specific times:
+
+```typescript
+timeline.call(() => {
+  console.log("This runs at timeline start")
+}, 0)
+
+timeline.call(() => {
+  console.log("This runs at 2 seconds")
+}, 2000)
+
+timeline.call(() => {
+  console.log("This runs at 5 seconds")
+}, 5000)
+```
+
+## Sequencing Animations
+
+### Sequential Animations
+
+Run animations one after another:
+
+```typescript
+const timeline = createTimeline({
+  duration: 6000,
+})
+
+// First animation (0-2s)
+timeline.add(obj, { x: 100, duration: 2000 }, 0)
+
+// Second animation (2-4s)
+timeline.add(obj, { y: 50, duration: 2000 }, 2000)
+
+// Third animation (4-6s)
+timeline.add(obj, { x: 0, y: 0, duration: 2000 }, 4000)
+```
+
+### Overlapping Animations
+
+```typescript
+// Start second animation before first finishes
+timeline.add(obj, { x: 100, duration: 2000 }, 0)     // 0-2s
+timeline.add(obj, { y: 50, duration: 2000 }, 1500)   // 1.5-3.5s
+timeline.add(obj, { opacity: 0.5, duration: 1000 }, 2500) // 2.5-3.5s
+```
+
+## Nested Timelines
+
+Sync multiple timelines together:
+
+```typescript
+import { createTimeline, Timeline } from "@opentui/core"
+
+// Create main timeline
+const mainTimeline = createTimeline({
+  duration: 10000,
+  loop: true,
+})
+
+// Create sub-timelines
+const subTimeline1 = createTimeline({
+  duration: 4000,
+  autoplay: false,  // Don't auto-start
+})
+
+const subTimeline2 = createTimeline({
+  duration: 3000,
+  autoplay: false,
+})
+
+// Add animations to sub-timelines
+subTimeline1.add(box1, { x: 100, duration: 2000 })
+subTimeline2.add(box2, { y: 50, duration: 1500 })
+
+// Sync sub-timelines to main timeline
+mainTimeline.sync(subTimeline1, 0)     // Start at 0ms
+mainTimeline.sync(subTimeline2, 2000)  // Start at 2000ms
+
+// Play main timeline - sub-timelines play automatically
+mainTimeline.play()
+```
+
+## Dynamic Animations
+
+### One-Time Animations
+
+Add animations that run once and are removed:
+
+```typescript
+// Animation runs once and is removed from timeline
+timeline.once(
+  obj,
+  {
+    x: 100,
+    duration: 1000,
+    onComplete: () => {
+      console.log("One-time animation complete")
+    },
+  }
+)
+```
+
+### Updating Timeline
+
+Update timeline manually (useful without `renderer.start()`):
+
+```typescript
+const timeline = createTimeline({
+  autoplay: false,
+})
+
+// Manual update loop
+let lastTime = Date.now()
+setInterval(() => {
+  const now = Date.now()
+  const deltaTime = now - lastTime
+  lastTime = now
+  
+  timeline.update(deltaTime)
+}, 16) // ~60 FPS
+```
+
+## Complete Examples
+
+### Animated Box
+
+```typescript
+import { createCliRenderer, createTimeline, BoxRenderable } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+renderer.start()
+
+const box = new BoxRenderable(renderer, {
+  id: "animated-box",
+  position: "absolute",
+  left: 10,
+  top: 5,
+  width: 8,
+  height: 4,
+  backgroundColor: "#FF6B6B",
+  borderStyle: "rounded",
+})
+
+renderer.root.add(box)
+
+const boxData = {
+  x: 10,
+  y: 5,
+  width: 8,
+  height: 4,
+}
+
+const timeline = createTimeline({
+  duration: 4000,
+  loop: true,
+})
+
+// Move right
+timeline.add(
+  boxData,
+  {
+    x: 60,
+    duration: 1000,
+    ease: "inOutQuad",
+    onUpdate: (anim) => {
+      box.left = Math.round(boxData.x)
+    },
+  },
+  0
+)
+
+// Move down
+timeline.add(
+  boxData,
+  {
+    y: 20,
+    duration: 1000,
+    ease: "inOutQuad",
+    onUpdate: (anim) => {
+      box.top = Math.round(boxData.y)
+    },
+  },
+  1000
+)
+
+// Scale up
+timeline.add(
+  boxData,
+  {
+    width: 16,
+    height: 8,
+    duration: 1000,
+    ease: "outBounce",
+    onUpdate: (anim) => {
+      box.width = Math.round(boxData.width)
+      box.height = Math.round(boxData.height)
+    },
+  },
+  2000
+)
+
+// Return to start
+timeline.add(
+  boxData,
+  {
+    x: 10,
+    y: 5,
+    width: 8,
+    height: 4,
+    duration: 1000,
+    ease: "inOutQuad",
+    onUpdate: (anim) => {
+      box.left = Math.round(boxData.x)
+      box.top = Math.round(boxData.y)
+      box.width = Math.round(boxData.width)
+      box.height = Math.round(boxData.height)
+    },
+  },
+  3000
+)
+```
+
+### Color Fade
+
+```typescript
+import { createTimeline, BoxRenderable, RGBA } from "@opentui/core"
+
+const box = new BoxRenderable(renderer, {
+  id: "color-box",
+  width: 20,
+  height: 10,
+})
+
+const colorData = {
+  r: 255,
+  g: 0,
+  b: 0,
+  a: 1.0,
+}
+
+const timeline = createTimeline({
+  duration: 3000,
+  loop: true,
+})
+
+timeline.add(
+  colorData,
+  {
+    r: 0,
+    g: 255,
+    b: 128,
+    duration: 1500,
+    ease: "inOutSine",
+    onUpdate: (anim) => {
+      const { r, g, b, a } = colorData
+      box.backgroundColor = RGBA.fromInts(
+        Math.round(r),
+        Math.round(g),
+        Math.round(b),
+        Math.round(a * 255)
+      )
+    },
+  },
+  0
+)
+
+timeline.add(
+  colorData,
+  {
+    r: 255,
+    g: 255,
+    b: 0,
+    a: 0.5,
+    duration: 1500,
+    ease: "inOutSine",
+    onUpdate: (anim) => {
+      const { r, g, b, a } = colorData
+      box.backgroundColor = RGBA.fromInts(
+        Math.round(r),
+        Math.round(g),
+        Math.round(b),
+        Math.round(a * 255)
+      )
+    },
+  },
+  1500
+)
+```
+
+### Progress Bar
+
+```typescript
+import { createTimeline, BoxRenderable, TextRenderable } from "@opentui/core"
+
+const progressBar = new BoxRenderable(renderer, {
+  id: "progress-bar",
+  width: 1,
+  height: 1,
+  backgroundColor: "#00FF00",
+})
+
+const progressText = new TextRenderable(renderer, {
+  id: "progress-text",
+  content: "0%",
+})
+
+const progress = { value: 0 }
+
+const timeline = createTimeline({
+  duration: 5000,
+})
+
+timeline.add(
+  progress,
+  {
+    value: 100,
+    duration: 5000,
+    ease: "linear",
+    onUpdate: (anim) => {
+      const percent = progress.value
+      progressBar.width = Math.max(1, Math.round(percent / 2))
+      progressText.content = `${Math.round(percent)}%`
+    },
+    onComplete: () => {
+      console.log("Progress complete!")
+    },
+  }
+)
+```
+
+### Alternating Movement
+
+```typescript
+const box = new BoxRenderable(renderer, {
+  id: "oscillating-box",
+  position: "absolute",
+  left: 10,
+  top: 5,
+})
+
+const movement = { x: 10 }
+
+const timeline = createTimeline({
+  duration: 10000,
+  loop: true,
+})
+
+// Oscillate left and right 5 times
+timeline.add(
+  movement,
+  {
+    x: 60,
+    duration: 800,
+    ease: "inOutQuad",
+    loop: 5,
+    alternate: true,    // Go back and forth
+    loopDelay: 200,     // Pause 200ms at each end
+    onUpdate: (anim) => {
+      box.left = Math.round(movement.x)
+    },
+    onLoop: () => {
+      console.log("Bounce!")
+    },
+  },
+  0
+)
+```
+
+## Integration with Renderer
+
+Timelines automatically integrate with the renderer's frame loop:
+
+```typescript
+import { engine } from "@opentui/core"
+
+// Attach to renderer (automatically done in most cases)
+engine.attach(renderer)
+
+// Timelines created with createTimeline() are automatically registered
+const timeline = createTimeline({ duration: 1000 })
+
+// Manually register a timeline
+engine.register(timeline)
+
+// Unregister when done
+engine.unregister(timeline)
+
+// Clear all timelines
+engine.clear()
+```
+
+## Performance Tips
+
+<AccordionGroup>
+  <Accordion title="Round Animated Values">
+    Always round values when applying to renderables:
+    
+    ```typescript
+    onUpdate: (anim) => {
+      box.left = Math.round(boxData.x)  // Good
+      // box.left = boxData.x            // Avoid - causes jitter
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Limit Simultaneous Animations">
+    Too many animations can affect performance:
+    
+    ```typescript
+    // Limit to 10-20 simultaneous complex animations
+    // Use simpler animations or reduce update frequency for background elements
+    ```
+  </Accordion>
+  
+  <Accordion title="Use Appropriate Easing">
+    Complex easing functions (elastic, bounce) are more expensive:
+    
+    ```typescript
+    // For simple movements, use simpler easing
+    ease: "linear"     // Fastest
+    ease: "inOutQuad"  // Good balance
+    ease: "outElastic" // More expensive, use sparingly
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="3D Rendering" icon="cube" href="/guides/3d-rendering">
+    Render 3D graphics with WebGPU
+  </Card>
+  <Card title="Syntax Highlighting" icon="code" href="/guides/syntax-highlighting">
+    Add tree-sitter syntax highlighting
+  </Card>
+</CardGroup>

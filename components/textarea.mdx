@@ -1,0 +1,447 @@
+---
+title: Textarea
+description: A multi-line text editor component with full keyboard navigation and editing support
+---
+
+## Overview
+
+The `TextareaRenderable` component provides a powerful multi-line text editing experience with support for text wrapping, selection, undo/redo, and extensive keyboard shortcuts. It extends `EditBufferRenderable` with rich text editing capabilities.
+
+## Basic Usage
+
+```typescript
+import { Screen, TextareaRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const textarea = new TextareaRenderable(ctx, {
+  x: 5,
+  y: 5,
+  width: 50,
+  height: 10,
+  initialValue: "Hello, world!",
+  placeholder: "Start typing...",
+})
+
+screen.append(textarea)
+textarea.focus()
+```
+
+## Props
+
+<ParamField path="initialValue" type="string">
+  Initial text content (can include newlines)
+</ParamField>
+
+<ParamField path="placeholder" type="StyledText | string | null" default="null">
+  Placeholder shown when textarea is empty. Can be plain text or styled text.
+</ParamField>
+
+<ParamField path="backgroundColor" type="ColorInput" default="'transparent'">
+  Background color when unfocused
+</ParamField>
+
+<ParamField path="textColor" type="ColorInput" default="'#FFFFFF'">
+  Text color when unfocused
+</ParamField>
+
+<ParamField path="focusedBackgroundColor" type="ColorInput" default="backgroundColor">
+  Background color when focused (falls back to backgroundColor)
+</ParamField>
+
+<ParamField path="focusedTextColor" type="ColorInput" default="textColor">
+  Text color when focused (falls back to textColor)
+</ParamField>
+
+<ParamField path="placeholderColor" type="ColorInput" default="'#666666'">
+  Color of placeholder text
+</ParamField>
+
+<ParamField path="keyBindings" type="KeyBinding[]">
+  Custom key bindings to override or extend default shortcuts
+</ParamField>
+
+<ParamField path="keyAliasMap" type="KeyAliasMap">
+  Custom key aliases for remapping keyboard shortcuts
+</ParamField>
+
+<ParamField path="onSubmit" type="(event: SubmitEvent) => void">
+  Callback fired when submit action is triggered (Meta+Enter)
+</ParamField>
+
+### Inherited Props from EditBufferRenderable
+
+<ParamField path="height" type="number">
+  Height in terminal rows
+</ParamField>
+
+<ParamField path="minHeight" type="number">
+  Minimum height for flex layouts
+</ParamField>
+
+<ParamField path="maxHeight" type="number">
+  Maximum height for flex layouts
+</ParamField>
+
+<ParamField path="wrapMode" type="'none' | 'word' | 'char'" default="'word'">
+  Text wrapping behavior
+</ParamField>
+
+## Events
+
+TextareaRenderable doesn't emit its own events by default, but you can use the `onSubmit` callback for form submissions.
+
+```typescript
+const textarea = new TextareaRenderable(ctx, {
+  x: 5,
+  y: 5,
+  width: 50,
+  height: 10,
+  onSubmit: (event) => {
+    console.log("Form submitted with:", textarea.plainText)
+  },
+})
+```
+
+## Methods
+
+### Text Operations
+
+```typescript
+// Get plain text content
+const text = textarea.plainText
+
+// Set text content
+textarea.setText("New content")
+
+// Insert text at cursor
+textarea.insertText("inserted text")
+
+// Insert single character
+textarea.insertChar("a")
+```
+
+### Cursor Movement
+
+```typescript
+// Move cursor
+textarea.moveCursorLeft()
+textarea.moveCursorRight()
+textarea.moveCursorUp()
+textarea.moveCursorDown()
+
+// Move with selection
+textarea.moveCursorLeft({ select: true })
+textarea.moveCursorRight({ select: true })
+
+// Word boundaries
+textarea.moveWordForward()
+textarea.moveWordBackward()
+textarea.moveWordForward({ select: true })
+
+// Line navigation
+textarea.gotoLineHome()
+textarea.gotoLineEnd()
+textarea.gotoVisualLineHome()
+textarea.gotoVisualLineEnd()
+
+// Buffer navigation
+textarea.gotoBufferHome()
+textarea.gotoBufferEnd()
+
+// Go to specific line
+textarea.gotoLine(5)
+```
+
+### Selection
+
+```typescript
+// Select all text
+textarea.selectAll()
+
+// Get current cursor offset
+const offset = textarea.cursorOffset
+
+// Set cursor by offset
+textarea.cursorOffset = 100
+```
+
+### Deletion
+
+```typescript
+// Delete characters
+textarea.deleteChar() // Delete forward
+textarea.deleteCharBackward() // Backspace
+
+// Delete words
+textarea.deleteWordForward()
+textarea.deleteWordBackward()
+
+// Delete line content
+textarea.deleteLine() // Delete entire line
+textarea.deleteToLineEnd() // Delete to end
+textarea.deleteToLineStart() // Delete to start
+```
+
+### Undo/Redo
+
+```typescript
+textarea.undo()
+textarea.redo()
+```
+
+### Line Operations
+
+```typescript
+// Insert newline
+textarea.newLine()
+```
+
+### Focus
+
+```typescript
+textarea.focus()
+textarea.blur()
+```
+
+### Extmarks
+
+Access the extmarks controller for advanced text highlighting and decorations.
+
+```typescript
+const extmarks = textarea.extmarks
+// Use extmarks API for custom highlighting
+```
+
+## Keyboard Shortcuts
+
+### Navigation
+
+| Key | Action |
+|-----|--------|
+| `←` / `→` / `↑` / `↓` | Move cursor |
+| `Ctrl+F` / `Ctrl+B` | Move cursor right/left |
+| `Home` / `End` | Go to buffer start/end |
+| `Ctrl+A` / `Ctrl+E` | Go to line start/end |
+| `Meta+A` / `Meta+E` | Go to visual line start/end |
+| `Cmd+←` / `Cmd+→` | Go to visual line start/end (Kitty mode) |
+| `Cmd+↑` / `Cmd+↓` | Go to buffer start/end (Kitty mode) |
+| `Meta+F` / `Meta+B` | Move word forward/backward |
+| `Ctrl+→` / `Ctrl+←` | Move word forward/backward |
+| `Meta+→` / `Meta+←` | Move word forward/backward |
+
+### Selection
+
+| Key | Action |
+|-----|--------|
+| `Shift+←` / `Shift+→` / `Shift+↑` / `Shift+↓` | Select while moving |
+| `Ctrl+Shift+A` / `Ctrl+Shift+E` | Select to line start/end |
+| `Meta+Shift+A` / `Meta+Shift+E` | Select to visual line start/end |
+| `Shift+Home` / `Shift+End` | Select to buffer start/end |
+| `Meta+Shift+F` / `Meta+Shift+B` | Select word forward/backward |
+| `Cmd+A` | Select all |
+
+### Editing
+
+| Key | Action |
+|-----|--------|
+| `Backspace` | Delete character backward |
+| `Delete` / `Ctrl+D` | Delete character forward |
+| `Ctrl+W` / `Option+Backspace` | Delete word backward |
+| `Meta+D` / `Meta+Delete` / `Ctrl+Delete` | Delete word forward |
+| `Ctrl+Shift+D` | Delete line |
+| `Ctrl+K` | Delete to line end |
+| `Ctrl+U` | Delete to line start |
+| `Enter` | Insert newline |
+| `Meta+Enter` | Submit (triggers onSubmit) |
+
+### Undo/Redo
+
+| Key | Action |
+|-----|--------|
+| `Ctrl+-` / `Cmd+Z` | Undo |
+| `Ctrl+.` / `Cmd+Shift+Z` | Redo |
+
+## Examples
+
+### Notes Editor
+
+```typescript
+import { Screen, TextareaRenderable, TextRenderable } from "@opentui/core"
+import { fg } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const title = new TextRenderable(ctx, {
+  x: 2,
+  y: 2,
+  text: "Notes",
+  textColor: "#FFFF00",
+})
+
+const textarea = new TextareaRenderable(ctx, {
+  x: 2,
+  y: 4,
+  width: 60,
+  height: 20,
+  backgroundColor: "#1a1a1a",
+  focusedBackgroundColor: "#252525",
+  placeholder: fg("#888888")("Start typing your notes..."),
+})
+
+const statusBar = new TextRenderable(ctx, {
+  x: 2,
+  y: 25,
+  text: "Ctrl+S to save | Esc to exit",
+  textColor: "#666666",
+})
+
+screen.append(title, textarea, statusBar)
+textarea.focus()
+```
+
+### Code Editor with Line Numbers
+
+```typescript
+import { Screen, TextareaRenderable, TextRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const editor = new TextareaRenderable(ctx, {
+  x: 5,
+  y: 2,
+  width: 70,
+  height: 25,
+  backgroundColor: "#0d1117",
+  textColor: "#c9d1d9",
+  focusedBackgroundColor: "#0d1117",
+  initialValue: `function hello() {\n  console.log("Hello, world!")\n}`,
+})
+
+screen.append(editor)
+editor.focus()
+```
+
+### Chat Input with Submit
+
+```typescript
+import { Screen, TextareaRenderable, TextRenderable } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const messageHistory = new TextRenderable(ctx, {
+  x: 2,
+  y: 2,
+  width: 60,
+  text: "",
+})
+
+const inputLabel = new TextRenderable(ctx, {
+  x: 2,
+  y: 20,
+  text: "Message:",
+})
+
+const messageInput = new TextareaRenderable(ctx, {
+  x: 2,
+  y: 21,
+  width: 60,
+  height: 3,
+  placeholder: "Type your message (Meta+Enter to send)...",
+  backgroundColor: "#1a1a1a",
+  onSubmit: () => {
+    const message = messageInput.plainText
+    if (message.trim()) {
+      messageHistory.text += `\n> ${message}`
+      messageInput.setText("")
+    }
+  },
+})
+
+screen.append(messageHistory, inputLabel, messageInput)
+messageInput.focus()
+```
+
+### Styled Placeholder
+
+```typescript
+import { Screen, TextareaRenderable } from "@opentui/core"
+import { fg, styled } from "@opentui/core"
+
+const screen = new Screen()
+const ctx = screen.createContext()
+
+const textarea = new TextareaRenderable(ctx, {
+  x: 5,
+  y: 5,
+  width: 50,
+  height: 10,
+  placeholder: [
+    fg("#666666")("Type something... "),
+    fg("#888888")("(supports markdown)"),
+  ],
+})
+
+screen.append(textarea)
+textarea.focus()
+```
+
+## Advanced Features
+
+### Custom Key Bindings
+
+```typescript
+const textarea = new TextareaRenderable(ctx, {
+  x: 5,
+  y: 5,
+  width: 50,
+  height: 10,
+  keyBindings: [
+    // Override default behavior
+    { name: "s", ctrl: true, action: "select-all" },
+    // Add custom save action
+    { name: "s", super: true, action: "submit" },
+  ],
+})
+```
+
+### Wrapping Modes
+
+```typescript
+// No wrapping (scroll horizontally)
+const noWrap = new TextareaRenderable(ctx, {
+  x: 5,
+  y: 5,
+  width: 50,
+  height: 10,
+  wrapMode: "none",
+})
+
+// Word wrapping (default)
+const wordWrap = new TextareaRenderable(ctx, {
+  x: 5,
+  y: 5,
+  width: 50,
+  height: 10,
+  wrapMode: "word",
+})
+
+// Character wrapping
+const charWrap = new TextareaRenderable(ctx, {
+  x: 5,
+  y: 5,
+  width: 50,
+  height: 10,
+  wrapMode: "char",
+})
+```
+
+## Related Components
+
+- [Input](/components/input) - Single-line text input
+- [Select](/components/select) - Dropdown selection
+- [TabSelect](/components/tabselect) - Tab navigation
