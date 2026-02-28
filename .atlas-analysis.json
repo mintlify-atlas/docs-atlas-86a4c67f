@@ -1,0 +1,207 @@
+{
+  "projectType": "framework",
+  "projectName": "OpenTUI",
+  "projectDescription": "A native terminal UI framework with TypeScript, React, and SolidJS support",
+  "theme": "aspen",
+  "primaryColor": "#00FFFF",
+  "lightColor": null,
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "core-concepts/renderer",
+              "core-concepts/renderables",
+              "core-concepts/constructs",
+              "core-concepts/layout-system",
+              "core-concepts/framebuffer"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/building-your-first-app",
+              "guides/styling-and-colors",
+              "guides/keyboard-and-mouse",
+              "guides/console-overlay",
+              "guides/animations",
+              "guides/3d-rendering",
+              "guides/syntax-highlighting"
+            ]
+          },
+          {
+            "group": "Framework Integrations",
+            "pages": [
+              "integrations/react",
+              "integrations/solid"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/performance",
+              "advanced/testing",
+              "advanced/environment-variables",
+              "advanced/native-zig-core"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Components",
+        "groups": [
+          {
+            "group": "Components",
+            "pages": [
+              "components/overview"
+            ]
+          },
+          {
+            "group": "Layout",
+            "pages": [
+              "components/box",
+              "components/scrollbox"
+            ]
+          },
+          {
+            "group": "Text & Content",
+            "pages": [
+              "components/text",
+              "components/textnode",
+              "components/markdown",
+              "components/code",
+              "components/diff"
+            ]
+          },
+          {
+            "group": "Input & Forms",
+            "pages": [
+              "components/input",
+              "components/textarea",
+              "components/select",
+              "components/slider",
+              "components/tabselect"
+            ]
+          },
+          {
+            "group": "Data Display",
+            "pages": [
+              "components/texttable",
+              "components/asciifont"
+            ]
+          },
+          {
+            "group": "Utilities",
+            "pages": [
+              "components/scrollbar",
+              "components/framebuffer-component"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core API",
+            "pages": [
+              "api/cli-renderer",
+              "api/renderable",
+              "api/buffer",
+              "api/console"
+            ]
+          },
+          {
+            "group": "Text & Editing",
+            "pages": [
+              "api/text-buffer",
+              "api/edit-buffer",
+              "api/editor-view"
+            ]
+          },
+          {
+            "group": "Rendering",
+            "pages": [
+              "api/framebuffer",
+              "api/native-span-feed",
+              "api/rgba"
+            ]
+          },
+          {
+            "group": "Input Handling",
+            "pages": [
+              "api/keyboard",
+              "api/mouse"
+            ]
+          },
+          {
+            "group": "Layout",
+            "pages": [
+              "api/yoga-layout"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "api/animation-timeline",
+              "api/syntax-highlighting",
+              "api/3d-api"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Native Zig core with TypeScript bindings",
+    "Component-based architecture with Yoga flexbox layout",
+    "React and SolidJS reconcilers for declarative UIs",
+    "Advanced text rendering with syntax highlighting",
+    "Built-in input components and event handling",
+    "3D rendering support with WebGPU",
+    "Console overlay for debugging",
+    "High-performance frame buffer operations"
+  ],
+  "publicApiSurface": [
+    "createCliRenderer",
+    "BaseRenderable",
+    "TextRenderable",
+    "BoxRenderable",
+    "InputRenderable",
+    "TextareaRenderable",
+    "SelectRenderable",
+    "SliderRenderable",
+    "TabSelectRenderable",
+    "TextTableRenderable",
+    "MarkdownRenderable",
+    "CodeRenderable",
+    "DiffRenderable",
+    "ScrollBoxRenderable",
+    "ScrollBarRenderable",
+    "ASCIIFontRenderable",
+    "FrameBuffer",
+    "OptimizedBuffer",
+    "TextBuffer",
+    "EditBuffer",
+    "EditorView",
+    "RGBA",
+    "Timeline",
+    "Text (construct)",
+    "Box (construct)",
+    "Input (construct)",
+    "render (React)",
+    "render (Solid)"
+  ]
+}
