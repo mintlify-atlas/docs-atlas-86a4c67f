@@ -119,6 +119,7 @@
             "group": "Utilities",
             "pages": [
               "components/scrollbar",
+              "components/linenumbers",
               "components/framebuffer-component"
             ]
           }

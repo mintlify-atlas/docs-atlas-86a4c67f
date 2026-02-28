@@ -1,0 +1,307 @@
+---
+title: LineNumberRenderable
+description: Add line numbers, signs, and gutter colors to text components
+---
+
+The `LineNumberRenderable` component displays line numbers and custom signs alongside text components that implement `LineInfoProvider`. It's commonly used with code editors, file viewers, and diff displays.
+
+## Basic Usage
+
+```typescript
+import { createCliRenderer, LineNumberRenderable, TextBufferRenderable } from "@opentui/core"
+
+const renderer = await createCliRenderer()
+
+// Create a text component
+const textBuffer = new TextBufferRenderable(renderer, {
+  width: "100%",
+  height: "100%",
+})
+
+// Add line numbers
+const lineNumbers = new LineNumberRenderable(renderer, {
+  target: textBuffer,
+  fg: "#888888",
+  bg: "#1a1a1a",
+  minWidth: 4,
+})
+
+renderer.root.add(lineNumbers)
+renderer.root.add(textBuffer)
+```
+
+## Props
+
+<ParamField path="target" type="Renderable & LineInfoProvider" required>
+  The text component to display line numbers for. Must implement the `LineInfoProvider` interface (e.g., `TextBufferRenderable`, `EditBufferRenderable`, `CodeRenderable`).
+</ParamField>
+
+<ParamField path="fg" type="string | RGBA">
+  Default foreground color for line numbers. Defaults to terminal foreground color.
+</ParamField>
+
+<ParamField path="bg" type="string | RGBA">
+  Default background color for the gutter. Defaults to transparent.
+</ParamField>
+
+<ParamField path="minWidth" type="number">
+  Minimum width in characters for the line number column. Automatically expands for larger line numbers. Default: `0`.
+</ParamField>
+
+<ParamField path="paddingRight" type="number">
+  Padding between line numbers and the text content in characters. Default: `1`.
+</ParamField>
+
+<ParamField path="lineColors" type="Map<number, string | RGBA | LineColorConfig>">
+  Custom colors for specific lines. Can set gutter color, content color, or both:
+  
+  ```typescript
+  const colors = new Map([
+    [5, "#FF0000"],  // Red gutter
+    [10, { gutter: "#FFFF00", content: "#00FF00" }],  // Yellow gutter, green content
+  ])
+  ```
+</ParamField>
+
+<ParamField path="lineSigns" type="Map<number, LineSign>">
+  Custom signs/icons to display for specific lines:
+  
+  ```typescript
+  const signs = new Map([
+    [5, { before: "●", beforeColor: "#FF0000" }],  // Red dot before line 5
+    [10, { after: "✓", afterColor: "#00FF00" }],   // Green checkmark after line 10
+  ])
+  ```
+</ParamField>
+
+<ParamField path="lineNumberOffset" type="number">
+  Offset to add to line numbers. Useful for displaying subset of a larger file. Default: `0`.
+</ParamField>
+
+<ParamField path="hideLineNumbers" type="Set<number>">
+  Set of line numbers to hide. The gutter space remains but the number is not displayed.
+</ParamField>
+
+<ParamField path="lineNumbers" type="Map<number, number>">
+  Custom mapping to override displayed line numbers. Maps actual line index to displayed number.
+</ParamField>
+
+<ParamField path="showLineNumbers" type="boolean">
+  Whether to show line numbers at all. When false, only signs are displayed. Default: `true`.
+</ParamField>
+
+## Types
+
+### LineSign
+
+```typescript
+interface LineSign {
+  before?: string        // Text to show before the line number
+  beforeColor?: string | RGBA  // Color for before text
+  after?: string         // Text to show after the line number
+  afterColor?: string | RGBA   // Color for after text
+}
+```
+
+### LineColorConfig
+
+```typescript
+interface LineColorConfig {
+  gutter?: string | RGBA    // Background color for the gutter
+  content?: string | RGBA   // Background color for the content area
+}
+```
+
+## Examples
+
+### Git-style diff indicators
+
+```typescript
+const lineNumbers = new LineNumberRenderable(renderer, {
+  target: codeBuffer,
+  fg: "#888888",
+  bg: "#1a1a1a",
+  minWidth: 4,
+  paddingRight: 2,
+  lineSigns: new Map([
+    [5, { before: "+", beforeColor: "#00FF00" }],   // Added line
+    [10, { before: "-", beforeColor: "#FF0000" }],  // Removed line
+    [15, { before: "~", beforeColor: "#FFFF00" }],  // Modified line
+  ]),
+})
+```
+
+### Error and warning indicators
+
+```typescript
+const signs = new Map()
+signs.set(5, { after: "●", afterColor: "#FF0000" })  // Error on line 5
+signs.set(10, { after: "⚠", afterColor: "#FFFF00" }) // Warning on line 10
+signs.set(15, { after: "ℹ", afterColor: "#00FFFF" }) // Info on line 15
+
+const lineNumbers = new LineNumberRenderable(renderer, {
+  target: codeBuffer,
+  lineSigns: signs,
+})
+```
+
+### Highlight current line
+
+```typescript
+const lineColors = new Map()
+lineColors.set(currentLine, {
+  gutter: "#2a2a2a",
+  content: "#1e1e1e",
+})
+
+const lineNumbers = new LineNumberRenderable(renderer, {
+  target: codeBuffer,
+  lineColors: lineColors,
+})
+
+// Update when current line changes
+function setCurrentLine(lineNumber: number) {
+  lineColors.clear()
+  lineColors.set(lineNumber, {
+    gutter: "#2a2a2a",
+    content: "#1e1e1e",
+  })
+  renderer.requestRender()
+}
+```
+
+### Breakpoint markers (debugger)
+
+```typescript
+const breakpoints = new Set([5, 10, 15])
+const signs = new Map()
+
+for (const line of breakpoints) {
+  signs.set(line, {
+    before: "●",
+    beforeColor: "#FF0000",
+  })
+}
+
+const lineNumbers = new LineNumberRenderable(renderer, {
+  target: codeBuffer,
+  lineSigns: signs,
+  lineColors: new Map(
+    Array.from(breakpoints).map(line => [line, "#3a0000"])
+  ),
+})
+```
+
+### Custom line numbering
+
+```typescript
+// Display every 5th line number
+const customNumbers = new Map()
+for (let i = 0; i < 100; i += 5) {
+  customNumbers.set(i, i)
+}
+
+const lineNumbers = new LineNumberRenderable(renderer, {
+  target: codeBuffer,
+  lineNumbers: customNumbers,
+  hideLineNumbers: new Set(
+    Array.from({ length: 100 }, (_, i) => i).filter(i => i % 5 !== 0)
+  ),
+})
+```
+
+### Relative line numbers (Vim-style)
+
+```typescript
+const currentLine = 10
+const totalLines = 20
+const lineNumbers = new Map()
+
+for (let i = 0; i < totalLines; i++) {
+  if (i === currentLine) {
+    lineNumbers.set(i, i)  // Show absolute for current line
+  } else {
+    lineNumbers.set(i, Math.abs(i - currentLine))  // Show relative distance
+  }
+}
+
+const lineNumbersRenderable = new LineNumberRenderable(renderer, {
+  target: codeBuffer,
+  lineNumbers: lineNumbers,
+  lineColors: new Map([[currentLine, "#2a2a2a"]]),
+})
+```
+
+## Common Patterns
+
+### Code editor with line numbers
+
+```typescript
+const container = Box({
+  width: "100%",
+  height: "100%",
+  flexDirection: "row",
+})
+
+const editor = new EditBufferRenderable(renderer, {
+  width: "100%",
+  height: "100%",
+})
+
+const lineNumbers = new LineNumberRenderable(renderer, {
+  target: editor,
+  fg: "#6e7681",
+  bg: "#0d1117",
+  minWidth: 4,
+  paddingRight: 2,
+})
+
+container.add(lineNumbers)
+container.add(editor)
+```
+
+### Dynamic sign updates
+
+```typescript
+class EditorWithLineNumbers {
+  private signs = new Map<number, LineSign>()
+  
+  addError(line: number, message: string) {
+    this.signs.set(line, {
+      after: "●",
+      afterColor: "#FF0000",
+    })
+    this.renderer.requestRender()
+  }
+  
+  clearError(line: number) {
+    this.signs.delete(line)
+    this.renderer.requestRender()
+  }
+  
+  clearAllErrors() {
+    this.signs.clear()
+    this.renderer.requestRender()
+  }
+}
+```
+
+## Notes
+
+<Note>
+  The `target` component must implement the `LineInfoProvider` interface, which includes `CodeRenderable`, `TextBufferRenderable`, `EditBufferRenderable`, `InputRenderable`, and `TextareaRenderable`.
+</Note>
+
+<Info>
+  LineNumberRenderable automatically adjusts its width based on the number of digits in line numbers. The `minWidth` prop ensures a minimum width even for small line counts.
+</Info>
+
+<Tip>
+  Use `lineColors` to highlight the current line, errors, or other special lines. Combine with `lineSigns` for visual indicators like breakpoints or git changes.
+</Tip>
+
+## Related Components
+
+- [Code](/components/code) - Syntax-highlighted code display
+- [Diff](/components/diff) - Side-by-side or unified diff viewer
+- [Textarea](/components/textarea) - Multi-line text editor
